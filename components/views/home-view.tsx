@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Mic, MicOff, MapPin, Clock, Phone, ChevronRight, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,7 +14,17 @@ interface HomeViewProps {
 
 export function HomeView({ onStartChat }: HomeViewProps) {
   const [isRecording, setIsRecording] = useState(false)
+  const [today, setToday] = useState("")
   const { clients, selectedClient, setSelectedClient } = useAppStore()
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }))
+  }, [])
 
   const handleVoiceInput = () => {
     setIsRecording(!isRecording)
@@ -30,13 +40,6 @@ export function HomeView({ onStartChat }: HomeViewProps) {
         return "bg-secondary text-secondary-foreground"
     }
   }
-
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  })
 
   return (
     <div className="flex flex-col gap-6 pb-24">

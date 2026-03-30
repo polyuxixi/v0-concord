@@ -9,6 +9,7 @@ import { ChatView } from "@/components/views/chat-view"
 import { ReportView } from "@/components/views/report-view"
 import { CreativeView } from "@/components/views/creative-view"
 import { BadgesView } from "@/components/views/badges-view"
+import { ExportReportsView } from "@/components/views/export-reports-view"
 import { useAppStore, Client } from "@/lib/store"
 
 const viewTitles: Record<string, string> = {
@@ -17,6 +18,7 @@ const viewTitles: Record<string, string> = {
   report: "Report",
   creative: "Creative Report",
   badges: "My Profile",
+  export: "Export Reports",
 }
 
 export default function ConcordApp() {
@@ -40,6 +42,14 @@ export default function ConcordApp() {
     setCurrentView("creative")
   }
 
+  const handleExportReports = () => {
+    setCurrentView("export")
+  }
+
+  const handleBackFromExport = () => {
+    setCurrentView("chat")
+  }
+
   const renderView = () => {
     switch (currentView) {
       case "home":
@@ -50,6 +60,7 @@ export default function ConcordApp() {
             client={selectedClient} 
             onBack={handleBackFromChat}
             onProceedToReport={handleProceedToReport}
+            onExportReports={handleExportReports}
           />
         )
       case "report":
@@ -58,6 +69,8 @@ export default function ConcordApp() {
         return <CreativeView />
       case "badges":
         return <BadgesView />
+      case "export":
+        return <ExportReportsView onBack={handleBackFromExport} />
       default:
         return <HomeView onStartChat={handleStartChat} />
     }
