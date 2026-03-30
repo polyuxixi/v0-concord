@@ -138,66 +138,68 @@ export function HomeView({ onStartChat }: HomeViewProps) {
               )}
               onClick={() => setSelectedClient(client)}
             >
-              <CardContent className="p-0">
-                <div className="flex">
-                  {/* Time indicator */}
-                  <div className={cn(
-                    "w-24 shrink-0 flex flex-col items-center justify-center py-5 text-white",
-                    client.status === "completed" && "bg-emerald-500",
-                    client.status === "in-progress" && "bg-amber-500",
-                    client.status === "pending" && "bg-muted-foreground"
-                  )}>
-                    <Clock className="h-5 w-5 mb-1" />
-                    <span className="text-base font-bold">{client.scheduledTime}</span>
-                    <span className="text-sm opacity-80">#{index + 1}</span>
-                  </div>
-
-                  {/* Client Info */}
-                  <div className="flex-1 p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold">{client.name}</h3>
-                            <Badge 
-                              variant="outline" 
-                              className={cn("text-sm capitalize mt-1", getStatusColor(client.status))}
-                            >
-                              {client.status === "completed" && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                              {client.status === "pending" && <Circle className="h-3.5 w-3.5 mr-1" />}
-                              {client.status}
-                            </Badge>
-                          </div>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn(
+                        "h-12 w-12 rounded-full flex items-center justify-center",
+                        client.status === "completed" && "bg-emerald-100",
+                        client.status === "in-progress" && "bg-amber-100",
+                        client.status === "pending" && "bg-primary/10"
+                      )}>
+                        <User className={cn(
+                          "h-6 w-6",
+                          client.status === "completed" && "text-emerald-600",
+                          client.status === "in-progress" && "text-amber-600",
+                          client.status === "pending" && "text-primary"
+                        )} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">{client.name}</h3>
+                          <span className="text-sm text-muted-foreground">#{index + 1}</span>
                         </div>
-                        
-                        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-5 w-5 shrink-0 mt-0.5" />
-                            <span className="line-clamp-2">{client.address}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-5 w-5 shrink-0" />
-                            <span>{client.phone}</span>
-                          </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-sm capitalize", getStatusColor(client.status))}
+                          >
+                            {client.status === "completed" && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                            {client.status === "pending" && <Circle className="h-3.5 w-3.5 mr-1" />}
+                            {client.status}
+                          </Badge>
+                          <Badge variant="secondary" className="text-sm">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {client.scheduledTime}
+                          </Badge>
                         </div>
                       </div>
-                      
-                      <Button 
-                        size="lg"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onStartChat(client)
-                        }}
-                        className="shrink-0"
-                      >
-                        Start
-                        <ChevronRight className="h-5 w-5 ml-1" />
-                      </Button>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 text-sm text-muted-foreground ml-15">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-5 w-5 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{client.address}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-5 w-5 shrink-0" />
+                        <span>{client.phone}</span>
+                      </div>
                     </div>
                   </div>
+                  
+                  <Button 
+                    size="lg"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onStartChat(client)
+                    }}
+                    className="shrink-0"
+                  >
+                    Start
+                    <ChevronRight className="h-5 w-5 ml-1" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>

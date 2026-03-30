@@ -466,42 +466,84 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         </div>
       </ScrollArea>
 
-      {/* Answer Summary with Completion Status */}
-      {completedAnswers.length > 0 && (
-        <Card className="mx-1 mb-3 bg-secondary/50">
-          <CardHeader className="py-2 px-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Question Answers & Completion Status:
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-3 pt-0">
-            <div className="flex flex-col gap-2 max-h-40 overflow-y-auto">
-              {completedAnswers.map((answer) => (
-                <div key={answer.questionId} className="flex flex-col gap-1 p-2 bg-background rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      Q{answer.questionId}
+      {/* Synchronized Question Answer Output Panel - Light Slate Blue Style */}
+      <Card className="mx-1 mb-3 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 border-slate-200 shadow-sm">
+        <CardHeader className="py-3 px-4 border-b border-slate-200/60">
+          <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            Synchronized Q&A Output
+            <Badge variant="secondary" className="ml-auto bg-slate-200 text-slate-600">
+              {completedAnswers.length}/{assessmentQuestions.length}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-3">
+          <div className="flex flex-col gap-3 max-h-48 overflow-y-auto">
+            {assessmentQuestions.map((q, index) => {
+              const answer = completedAnswers.find(a => a.questionId === q.id)
+              const isActive = index === currentQuestionIndex
+              
+              return (
+                <div 
+                  key={q.id} 
+                  className={cn(
+                    "p-3 rounded-xl border transition-all",
+                    isActive && !answer 
+                      ? "bg-primary/10 border-primary/30 shadow-sm" 
+                      : answer 
+                        ? "bg-white border-slate-200" 
+                        : "bg-slate-50/50 border-slate-100"
+                  )}
+                >
+                  <div className="flex items-start gap-2 mb-2">
+                    <Badge 
+                      variant={answer ? "default" : isActive ? "secondary" : "outline"}
+                      className={cn(
+                        "text-xs shrink-0",
+                        answer && "bg-emerald-500",
+                        isActive && !answer && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      Q{q.id}
                     </Badge>
-                    <p className="text-xs text-muted-foreground truncate flex-1">
-                      {answer.answer.substring(0, 50)}...
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      {q.question.substring(0, 80)}...
                     </p>
                   </div>
-                  <select
-                    value={answer.completionStatus}
-                    onChange={(e) => handleCompletionSelect(answer.questionId, e.target.value)}
-                    className="text-xs bg-muted border border-input rounded-md px-2 py-1"
-                  >
-                    <option value="">Select completion status...</option>
-                    {completionOptions.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                  
+                  {answer ? (
+                    <div className="space-y-2">
+                      <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <p className="text-xs text-slate-700">
+                          <span className="font-medium text-primary">Answer: </span>
+                          {answer.answer.substring(0, 100)}{answer.answer.length > 100 ? "..." : ""}
+                        </p>
+                      </div>
+                      <select
+                        value={answer.completionStatus}
+                        onChange={(e) => handleCompletionSelect(answer.questionId, e.target.value)}
+                        className="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      >
+                        <option value="">Select completion status...</option>
+                        {completionOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : isActive ? (
+                    <div className="flex items-center gap-2 text-xs text-primary">
+                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      Waiting for response...
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">Not yet answered</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Hidden file input for camera/image upload */}
       <input
