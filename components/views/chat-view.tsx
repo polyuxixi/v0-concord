@@ -1,23 +1,22 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { 
   Mic, 
   MicOff, 
   Camera, 
-  Send, 
   ArrowLeft, 
-  Check,
   Droplets,
   Moon,
   Utensils,
   Dumbbell,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Bot,
+  User
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { useAppStore, Client, AssessmentAnswer } from "@/lib/store"
@@ -64,16 +63,18 @@ const assessmentQuestions = [
 
 const completionOptions = ["100% Complete", "> 50% Complete", "< 50% Complete", "Not Conducted", "Unable to Complete"]
 
-export function ChatView({ client, onBack, onProceedToReport, onExportReports }: ChatViewProps) {
+export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [inputValue, setInputValue] = useState("")
   const [isRecording, setIsRecording] = useState(false)
+  const [isListening, setIsListening] = useState(false)
   const [completedAnswers, setCompletedAnswers] = useState<AssessmentAnswer[]>([])
   const [recognitionText, setRecognitionText] = useState("")
+  const [isAiThinking, setIsAiThinking] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const { 
     setAssessmentAnswers, 
@@ -81,12 +82,68 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
     updateHealthMetric 
   } = useAppStore()
 
+  // Process the current transcription and move to next question
+  const processAnswer = useCallback((answerText: string) => {
+    if (!answerText.trim()) return
+
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: answerText,
+      source: "voice"
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    // Save answer
+    const currentQ = assessmentQuestions[currentQuestionIndex]
+    const newAnswer: AssessmentAnswer = {
+      questionId: currentQ.id,
+      question: currentQ.question,
+      answer: answerText,
+      completionStatus: ""
+    }
+    setCompletedAnswers(prev => [...prev, newAnswer])
+
+    setRecognitionText("")
+
+    // AI response and next question
+    setIsAiThinking(true)
+    setTimeout(() => {
+      setIsAiThinking(false)
+      
+      if (currentQuestionIndex < assessmentQuestions.length - 1) {
+        const nextIndex = currentQuestionIndex + 1
+        setCurrentQuestionIndex(nextIndex)
+        
+        const aiResponse: Message = {
+          id: `ai-resp-${Date.now()}`,
+          role: "ai",
+          content: `Good. I've recorded your response. Now let's proceed to the next question.`
+        }
+        const nextQuestion: Message = {
+          id: `q-${assessmentQuestions[nextIndex].id}`,
+          role: "ai",
+          content: assessmentQuestions[nextIndex].question,
+          questionId: assessmentQuestions[nextIndex].id
+        }
+        setMessages(prev => [...prev, aiResponse, nextQuestion])
+      } else {
+        const completeMessage: Message = {
+          id: "complete",
+          role: "ai",
+          content: "Excellent! You have completed all the assessment questions. Please review and set the completion status for each question below, then tap 'Export Two Reports' to generate the reports."
+        }
+        setMessages(prev => [...prev, completeMessage])
+      }
+    }, 800)
+  }, [currentQuestionIndex])
+
   useEffect(() => {
     if (client && messages.length === 0) {
       const welcomeMessage: Message = {
         id: "welcome",
         role: "ai",
-        content: `Hello! I will now assist you with the cognitive assessment for ${client.name}. Let's begin with the first question.`
+        content: `Hello! I will guide you through the cognitive assessment for ${client.name}. Tap the large microphone button to start voice input - I will automatically proceed to the next question after each of your responses.`
       }
       const firstQuestion: Message = {
         id: "q-1.0",
@@ -104,7 +161,7 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
     }
   }, [messages])
 
-  // Initialize speech recognition
+  // Initialize speech recognition with auto-proceed
   useEffect(() => {
     if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -127,20 +184,37 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
         }
 
         if (finalTranscript) {
-          setInputValue(prev => prev + finalTranscript)
-          setRecognitionText("")
+          setRecognitionText(prev => prev + finalTranscript)
+          
+          // Reset silence timeout when we get final transcript
+          if (silenceTimeoutRef.current) {
+            clearTimeout(silenceTimeoutRef.current)
+          }
+          // Set new timeout - auto submit after 2 seconds of silence
+          silenceTimeoutRef.current = setTimeout(() => {
+            setRecognitionText(current => {
+              if (current.trim()) {
+                processAnswer(current)
+              }
+              return ""
+            })
+          }, 2000)
         } else {
-          setRecognitionText(interimTranscript)
+          setRecognitionText(prev => {
+            const base = prev.replace(/\[.*\]$/, "")
+            return base + `[${interimTranscript}]`
+          })
         }
       }
 
       recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("Speech recognition error:", event.error)
         setIsRecording(false)
+        setIsListening(false)
       }
 
       recognitionRef.current.onend = () => {
-        if (isRecording) {
+        if (isListening) {
           recognitionRef.current?.start()
         }
       }
@@ -148,55 +222,11 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
 
     return () => {
       recognitionRef.current?.stop()
-    }
-  }, [isRecording])
-
-  const handleSendMessage = (source: "voice" | "camera" | "text" = "text") => {
-    if (!inputValue.trim()) return
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: inputValue,
-      source
-    }
-    setMessages(prev => [...prev, userMessage])
-
-    // Save answer
-    const currentQ = assessmentQuestions[currentQuestionIndex]
-    const newAnswer: AssessmentAnswer = {
-      questionId: currentQ.id,
-      question: currentQ.question,
-      answer: inputValue,
-      completionStatus: ""
-    }
-    setCompletedAnswers(prev => [...prev, newAnswer])
-
-    setInputValue("")
-    setRecognitionText("")
-
-    // Move to next question or finish
-    setTimeout(() => {
-      if (currentQuestionIndex < assessmentQuestions.length - 1) {
-        const nextIndex = currentQuestionIndex + 1
-        setCurrentQuestionIndex(nextIndex)
-        const nextQuestion: Message = {
-          id: `q-${assessmentQuestions[nextIndex].id}`,
-          role: "ai",
-          content: assessmentQuestions[nextIndex].question,
-          questionId: assessmentQuestions[nextIndex].id
-        }
-        setMessages(prev => [...prev, nextQuestion])
-      } else {
-        const completeMessage: Message = {
-          id: "complete",
-          role: "ai",
-          content: "Great! You have completed all the assessment questions. Please set completion status for each question, then proceed to export reports."
-        }
-        setMessages(prev => [...prev, completeMessage])
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
       }
-    }, 500)
-  }
+    }
+  }, [isListening, processAnswer])
 
   const handleCompletionSelect = (answerId: string, status: string) => {
     setCompletedAnswers(prev => 
@@ -218,14 +248,27 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
     }
 
     if (isRecording) {
+      // Stop recording and process any pending text
       recognitionRef.current.stop()
       setIsRecording(false)
-      // Submit the voice input if there's content
-      if (inputValue.trim()) {
-        handleSendMessage("voice")
+      setIsListening(false)
+      
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
+      }
+      
+      // Process any remaining text
+      if (recognitionText.trim()) {
+        const cleanText = recognitionText.replace(/\[.*\]$/, "").trim()
+        if (cleanText) {
+          processAnswer(cleanText)
+        }
       }
     } else {
+      // Start continuous listening mode
       setIsRecording(true)
+      setIsListening(true)
+      setRecognitionText("")
       recognitionRef.current.start()
     }
   }
@@ -239,13 +282,57 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
     if (!file) return
 
     // Simulated OCR - in production, this would call an OCR API
-    // For demo, we'll simulate text recognition
-    const simulatedOCRText = `[Recognized from image: Client showed good engagement. Memory recall was partially successful. Orientation questions answered correctly.]`
+    const simulatedOCRText = `Client showed good engagement during the session. Memory recall was partially successful with 2 out of 3 items remembered. Orientation questions were answered correctly for time and location.`
     
-    setInputValue(prev => {
-      const newValue = prev ? `${prev}\n${simulatedOCRText}` : simulatedOCRText
-      return newValue
-    })
+    // Add OCR text as a user message
+    const userMessage: Message = {
+      id: `user-ocr-${Date.now()}`,
+      role: "user",
+      content: simulatedOCRText,
+      source: "camera"
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    // Save as answer for current question
+    const currentQ = assessmentQuestions[currentQuestionIndex]
+    const newAnswer: AssessmentAnswer = {
+      questionId: currentQ.id,
+      question: currentQ.question,
+      answer: simulatedOCRText,
+      completionStatus: ""
+    }
+    setCompletedAnswers(prev => [...prev, newAnswer])
+
+    // Move to next question
+    setIsAiThinking(true)
+    setTimeout(() => {
+      setIsAiThinking(false)
+      
+      if (currentQuestionIndex < assessmentQuestions.length - 1) {
+        const nextIndex = currentQuestionIndex + 1
+        setCurrentQuestionIndex(nextIndex)
+        
+        const aiResponse: Message = {
+          id: `ai-ocr-resp-${Date.now()}`,
+          role: "ai",
+          content: `I've captured the text from your photo. Let's continue with the next question.`
+        }
+        const nextQuestion: Message = {
+          id: `q-${assessmentQuestions[nextIndex].id}`,
+          role: "ai",
+          content: assessmentQuestions[nextIndex].question,
+          questionId: assessmentQuestions[nextIndex].id
+        }
+        setMessages(prev => [...prev, aiResponse, nextQuestion])
+      } else {
+        const completeMessage: Message = {
+          id: "complete-ocr",
+          role: "ai",
+          content: "All questions completed! Please set the completion status for each question and export the reports."
+        }
+        setMessages(prev => [...prev, completeMessage])
+      }
+    }, 800)
 
     // Clear file input
     if (fileInputRef.current) {
@@ -270,14 +357,14 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
         </Button>
         <div className="flex-1">
           <h2 className="font-semibold">{client?.name || "AI Assessment"}</h2>
-          <p className="text-xs text-muted-foreground">Cognitive Assessment in Progress</p>
+          <p className="text-xs text-muted-foreground">AI-Guided Cognitive Assessment</p>
         </div>
         <Badge variant="secondary">
           {currentQuestionIndex + 1}/{assessmentQuestions.length}
         </Badge>
       </div>
 
-      {/* Health Status Icons for Current Client */}
+      {/* Health Status Icons */}
       <div className="py-3 border-b border-border">
         <p className="text-xs text-muted-foreground mb-2">Client Health Status (tap to rate 0-10):</p>
         <div className="grid grid-cols-4 gap-2">
@@ -322,20 +409,25 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
             <div
               key={message.id}
               className={cn(
-                "flex",
+                "flex gap-2",
                 message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
+              {message.role === "ai" && (
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+              )}
               <div
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-3",
+                  "max-w-[80%] rounded-2xl px-4 py-3",
                   message.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-muted text-foreground rounded-bl-md"
                 )}
               >
                 {message.questionId && (
-                  <Badge variant="outline" className="mb-2 text-xs">
+                  <Badge variant="outline" className="mb-2 text-xs bg-background/50">
                     Q{message.questionId}
                   </Badge>
                 )}
@@ -346,8 +438,30 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
                 )}
                 <p className="text-sm leading-relaxed">{message.content}</p>
               </div>
+              {message.role === "user" && (
+                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
             </div>
           ))}
+          
+          {/* AI Thinking Indicator */}
+          {isAiThinking && (
+            <div className="flex gap-2 justify-start">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Bot className="h-4 w-4 text-primary" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
@@ -399,67 +513,73 @@ export function ChatView({ client, onBack, onProceedToReport, onExportReports }:
         onChange={handleImageUpload}
       />
 
-      {/* Input Area */}
-      <div className="border-t border-border pt-3 pb-2">
+      {/* Voice Input Area */}
+      <div className="border-t border-border pt-4 pb-2">
         {/* Voice Recognition Status */}
         {isRecording && (
-          <div className="mb-2 p-2 bg-primary/10 rounded-lg">
-            <div className="flex items-center gap-2">
+          <div className="mb-3 p-3 bg-primary/10 rounded-xl border border-primary/20">
+            <div className="flex items-center justify-center gap-2 mb-2">
               <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-xs text-primary font-medium">Recording...</span>
+              <span className="text-sm text-primary font-medium">Listening... Speak now</span>
             </div>
             {recognitionText && (
-              <p className="text-xs text-muted-foreground mt-1 italic">
-                {recognitionText}
-              </p>
+              <div className="bg-background rounded-lg p-2">
+                <p className="text-sm text-foreground">
+                  {recognitionText.replace(/\[.*\]$/, "")}
+                  <span className="text-muted-foreground italic">
+                    {recognitionText.match(/\[.*\]$/)?.[0]?.slice(1, -1) || ""}
+                  </span>
+                </p>
+              </div>
             )}
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              I will automatically proceed to the next question after you pause speaking
+            </p>
           </div>
         )}
 
-        {/* Main Input Controls */}
-        <div className="flex items-center gap-2">
-          {/* Large Prominent Camera Button */}
+        {/* Main Input Controls - Large Voice Button with Camera Next to it */}
+        <div className="flex items-center justify-center gap-6">
+          {/* Camera Button (Floating style, next to mic) */}
           <Button
             variant="outline"
             size="icon"
             onClick={handleCameraClick}
-            className="shrink-0 rounded-full h-14 w-14 border-2 border-accent bg-accent/30 hover:bg-accent/50 shadow-lg"
+            className="shrink-0 rounded-full h-16 w-16 border-2 border-accent bg-accent/20 hover:bg-accent/40 shadow-lg"
           >
-            <Camera className="h-7 w-7 text-accent-foreground" />
+            <Camera className="h-8 w-8 text-accent-foreground" />
           </Button>
 
-          {/* Voice Input Button - Direct Speech-to-Text */}
-          <Button
-            variant={isRecording ? "destructive" : "default"}
-            size="icon"
+          {/* Large Voice Input Button */}
+          <button
             onClick={handleVoiceToggle}
             className={cn(
-              "shrink-0 rounded-full h-12 w-12",
-              isRecording && "animate-pulse"
+              "relative h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl",
+              isRecording 
+                ? "bg-destructive text-destructive-foreground" 
+                : "bg-primary text-primary-foreground hover:scale-105"
             )}
           >
-            {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-          </Button>
+            {isRecording ? (
+              <MicOff className="h-10 w-10" />
+            ) : (
+              <Mic className="h-10 w-10" />
+            )}
+            {isRecording && (
+              <>
+                <span className="absolute inset-0 rounded-full animate-ping bg-destructive/30" />
+                <span className="absolute inset-[-4px] rounded-full border-4 border-destructive/50 animate-pulse" />
+              </>
+            )}
+          </button>
 
-          {/* Text Input */}
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Voice or OCR text appears here..."
-            className="flex-1 rounded-full"
-            onKeyDown={(e) => e.key === "Enter" && handleSendMessage("text")}
-          />
-
-          {/* Send Button */}
-          <Button
-            size="icon"
-            onClick={() => handleSendMessage("text")}
-            disabled={!inputValue.trim()}
-            className="shrink-0 rounded-full h-10 w-10"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
+          {/* Spacer for symmetry */}
+          <div className="w-16 h-16" />
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-3">
+          {isRecording ? "Tap to stop recording" : "Tap microphone to start AI-guided conversation"}
+        </p>
 
         {/* Export Two Reports Button */}
         {isComplete && (

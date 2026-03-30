@@ -20,9 +20,10 @@ export function AppHeader({ title }: AppHeaderProps) {
   const { fontSize, setFontSize } = useFontSize()
   
   const fontSizeOptions = [
-    { value: "small" as const, label: "Small", size: "text-sm" },
-    { value: "medium" as const, label: "Medium", size: "text-base" },
-    { value: "large" as const, label: "Large", size: "text-lg" },
+    { value: "small" as const, label: "Small (A)", size: "text-sm" },
+    { value: "medium" as const, label: "Medium (A)", size: "text-base" },
+    { value: "large" as const, label: "Large (A)", size: "text-lg" },
+    { value: "xlarge" as const, label: "Extra Large (A)", size: "text-xl" },
   ]
 
   return (
