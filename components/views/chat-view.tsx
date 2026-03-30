@@ -63,7 +63,7 @@ const assessmentQuestions = [
   { id: "4.0", question: "Does the client remember the 3 items from question 2.0? Please have the client list them." },
 ]
 
-const completionOptions = ["100% Complete", "> 50% Complete", "< 50% Complete", "Not Conducted", "Unable to Complete"]
+const completionOptions = ["100% Complete", "> 50% Complete", "< 50% Complete", "Not Conducted", "Unable to Complete"] as const
 
 export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
   const [messages, setMessages] = useState<Message[]>([])

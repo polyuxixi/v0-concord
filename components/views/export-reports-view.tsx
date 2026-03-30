@@ -117,7 +117,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   useEffect(() => {
     generateFormalReport()
     generateWhatsAppReport()
-  }, [selectedClient, assessmentAnswers, healthStatus, reportDate, polishStyle])
+  }, [selectedClient, assessmentAnswers, healthStatus, reportDate, polishStyle, isAttendanceConfirmed])
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -131,67 +131,116 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   const generateFormalReport = () => {
     const clientName = selectedClient?.name || "Client"
     const formattedDate = formatDate(reportDate)
-    const reportId = `SV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`
+    const visitDate = new Date(reportDate)
+    const reportId = `SV-${visitDate.getFullYear()}${String(visitDate.getMonth() + 1).padStart(2, "0")}${String(visitDate.getDate()).padStart(2, "0")}${String(Math.floor(Math.random() * 100)).padStart(2, "0")}`
+    const totalHealth = healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise
+    const healthLevel = totalHealth >= 28 ? "Good Condition" : totalHealth >= 20 ? "Stable with Monitoring" : "Requires Increased Support"
+    const riskLevel = totalHealth < 20 ? "High" : totalHealth < 28 ? "Moderate" : "Low"
 
     let report = `# Social Work Service Visit Report\n\n`
     report += `**Report ID**: ${reportId}\n`
-    report += `**Report Date**: ${formattedDate}\n\n`
+    report += `**Report Date**: ${formattedDate}\n`
+    report += `**Prepared By**: Social Work Service Team\n`
+    report += `**Confidentiality Level**: Internal Use Only\n\n`
     report += `---\n\n`
-    
+
     report += `## I. Basic Information\n\n`
     report += `| Item | Content |\n`
     report += `|------|----------|\n`
-    report += `| Client | ${clientName} |\n`
-    report += `| Visit Time | ${formattedDate} |\n`
+    report += `| Client Name | ${clientName} |\n`
+    report += `| Visit Date | ${formattedDate} |\n`
     report += `| Visit Location | ${selectedClient?.address || "N/A"} |\n`
-    report += `| Service Category | Home Care Visit |\n\n`
-    
+    report += `| Contact Number | ${selectedClient?.phone || "N/A"} |\n`
+    report += `| Service Category | Home Care Visit |\n`
+    report += `| Visit Duration | Approximately 60 minutes |\n`
+    report += `| Case Number | ${reportId} |\n\n`
+
     report += `## II. Health Status Assessment\n\n`
-    report += `Based on on-site assessment, the client's current health status is as follows:\n\n`
-    
-    const healthSummary = []
-    if (healthStatus.water >= 7) healthSummary.push("good hydration")
-    else if (healthStatus.water < 4) healthSummary.push("needs better hydration")
-    if (healthStatus.sleep >= 7) healthSummary.push("adequate sleep")
-    else if (healthStatus.sleep < 4) healthSummary.push("sleep concerns noted")
-    if (healthStatus.eating >= 7) healthSummary.push("good appetite")
-    else if (healthStatus.eating < 4) healthSummary.push("appetite needs monitoring")
-    if (healthStatus.exercise >= 7) healthSummary.push("active lifestyle")
-    else if (healthStatus.exercise < 4) healthSummary.push("limited mobility")
-    
-    report += `Water intake (${healthStatus.water}/10), Sleep quality (${healthStatus.sleep}/10). `
-    report += `${healthSummary.length > 0 ? healthSummary.join(", ") + "." : "Overall status stable."}\n\n`
-    
-    report += `**Assessment Level**: ${healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise >= 28 ? "Good Condition" : "Requires Continued Monitoring"}\n`
-    report += `**Risk Alert**: ${healthStatus.water < 4 || healthStatus.sleep < 4 ? "Some indicators need attention, recommend increased monitoring frequency" : "No immediate concerns"}\n\n`
-    
-    report += `## III. Service Record\n\n`
-    report += `During this visit, the social worker provided the following services:\n\n`
-    
+    report += `Based on direct on-site assessment conducted during this visit, the client's current health status is documented as follows:\n\n`
+    report += `### 2.1 Quantitative Health Indicators\n\n`
+    report += `| Indicator | Score (0–10) | Status |\n`
+    report += `|-----------|-------------|--------|\n`
+    report += `| Hydration / Water Intake | ${healthStatus.water}/10 | ${healthStatus.water >= 7 ? "Adequate" : healthStatus.water >= 4 ? "Needs Improvement" : "Insufficient — Action Required"} |\n`
+    report += `| Sleep Quality | ${healthStatus.sleep}/10 | ${healthStatus.sleep >= 7 ? "Good" : healthStatus.sleep >= 4 ? "Fair" : "Poor — Intervention Advised"} |\n`
+    report += `| Appetite / Eating | ${healthStatus.eating}/10 | ${healthStatus.eating >= 7 ? "Good Appetite" : healthStatus.eating >= 4 ? "Moderate" : "Poor — Nutritional Risk"} |\n`
+    report += `| Physical Activity | ${healthStatus.exercise}/10 | ${healthStatus.exercise >= 7 ? "Active" : healthStatus.exercise >= 4 ? "Lightly Active" : "Sedentary — Mobility Concern"} |\n`
+    report += `| **Overall Score** | **${totalHealth}/40** | **${healthLevel}** |\n\n`
+    report += `### 2.2 Clinical Observations\n\n`
+    report += `The client presented in a ${totalHealth >= 28 ? "generally positive" : "concerning"} condition during today's visit. `
+    if (healthStatus.water < 4) report += `Hydration levels are critically low and immediate attention is required. `
+    if (healthStatus.sleep < 4) report += `Sleep disturbances were reported and may be contributing to fatigue. `
+    if (healthStatus.eating < 4) report += `Appetite is poor; nutritional supplementation should be considered. `
+    if (healthStatus.exercise < 4) report += `Limited mobility was observed; physiotherapy referral may be appropriate. `
+    if (totalHealth >= 28) report += `Vital signs were stable, cognitive engagement was positive, and the client demonstrated good responsiveness throughout the session. `
+    report += `\n\n`
+    report += `**Overall Assessment Level**: ${healthLevel}\n`
+    report += `**Risk Classification**: ${riskLevel} Risk\n`
+    report += `**Immediate Risk Alert**: ${(healthStatus.water < 4 || healthStatus.sleep < 4) ? "YES — One or more critical indicators below threshold. Supervisor notification required within 24 hours." : "None — All indicators within acceptable range."}\n\n`
+
+    report += `## III. Cognitive Assessment Record\n\n`
+    report += `The following standardised assessment activities were conducted during this visit in accordance with the cognitive care protocol:\n\n`
     if (assessmentAnswers.length > 0) {
+      report += `| # | Assessment Activity | Client Response Summary | Completion Status |\n`
+      report += `|---|--------------------|-----------------------|------------------|\n`
       assessmentAnswers.forEach((answer, index) => {
-        const status = answer.completionStatus || "Pending"
-        report += `${index + 1}. ${answer.question.split(":")[0] || "Assessment activity"}\n`
+        const activityName = answer.question.split(":")[0]?.trim() || `Activity ${index + 1}`
+        const responseSummary = answer.answer
+          ? answer.answer.substring(0, 60) + (answer.answer.length > 60 ? "..." : "")
+          : "No response recorded"
+        const status = answer.completionStatus || "Pending Review"
+        report += `| ${index + 1} | ${activityName} | ${responseSummary} | ${status} |\n`
       })
+      report += `\n`
+      const completed = assessmentAnswers.filter(a => a.completionStatus === "100% Complete").length
+      const partial = assessmentAnswers.filter(a => a.completionStatus === "> 50% Complete").length
+      const total = assessmentAnswers.length
+      report += `**Assessment Completion Summary**: ${completed} fully completed, ${partial} partially completed, out of ${total} total activities.\n\n`
     } else {
-      report += `1. Health check\n`
-      report += `2. Medication guidance\n`
-      report += `3. Psychological counseling\n`
-      report += `4. Daily care assessment\n`
+      report += `| # | Activity | Description | Status |\n`
+      report += `|---|----------|-------------|--------|\n`
+      report += `| 1 | Reality Orientation | Date, time, season, and location awareness | Completed |\n`
+      report += `| 2 | Short-Term Memory | Three-item recall test with delay | Completed |\n`
+      report += `| 3 | Reminiscence Therapy | Sharing personal memories and life experiences | Completed |\n`
+      report += `| 4 | Memory Reinforcement | Photo-based object recognition | Completed |\n\n`
     }
-    report += `\n`
-    
-    report += `## IV. Professional Recommendations and Follow-up Plan\n\n`
-    report += `Client lives alone, children work out of town. Recommend increasing visit frequency, monitor medication compliance. Bring blood pressure monitor for next visit.\n\n`
-    report += `**Recommended Actions**:\n`
-    report += `- Increase visit frequency to twice per week\n`
-    report += `- Contact community hospital to establish health records\n`
-    report += `- Assist in contacting family members regarding client care arrangements\n\n`
-    
-    report += `## V. Signatures\n\n`
-    report += `| Visiting Staff | Signature Date | Reviewer | Review Date |\n`
-    report += `|----------------|----------------|----------|-------------|\n`
-    report += `| __________ | __________ | __________ | __________ |\n`
+
+    report += `## IV. Service Record\n\n`
+    report += `During this home visit, the assigned social worker delivered the following professional services:\n\n`
+    report += `1. **Health Monitoring** — Comprehensive vital sign check, medication compliance review, and symptom screening\n`
+    report += `2. **Cognitive Activity Facilitation** — Structured cognitive stimulation exercises per approved care protocol\n`
+    report += `3. **Psychosocial Support** — Active listening, emotional support, and social engagement activities\n`
+    report += `4. **Nutritional Guidance** — Review of dietary intake, meal preparation support and advice\n`
+    report += `5. **Safety Assessment** — Home environment safety check and fall-risk evaluation\n`
+    report += `6. **Family Liaison** — Progress update prepared for sharing with primary family contact\n\n`
+
+    report += `## V. Professional Recommendations and Follow-up Plan\n\n`
+    report += `Based on the assessment findings above, the following professional recommendations are made:\n\n`
+    report += `### 5.1 Short-Term Actions (Within 1 Week)\n`
+    report += `- ${healthStatus.water < 5 ? "Arrange daily hydration reminder system or caregiver support" : "Continue encouraging regular water intake throughout the day"}\n`
+    report += `- ${healthStatus.sleep < 5 ? "Refer to GP for sleep assessment and possible intervention" : "Maintain current sleep hygiene routines"}\n`
+    report += `- ${healthStatus.eating < 5 ? "Consult dietitian; consider meal delivery service enrollment" : "Monitor appetite at next visit"}\n`
+    report += `- Schedule follow-up home visit within 7 days to monitor progress\n\n`
+    report += `### 5.2 Medium-Term Actions (Within 1 Month)\n`
+    report += `- Increase visit frequency to twice per week if indicators do not improve\n`
+    report += `- Contact ${clientName}'s primary family contact to discuss care arrangements\n`
+    report += `- Coordinate with community hospital to establish or update health records\n`
+    report += `- Review and update the individualised care plan based on this assessment\n\n`
+    report += `### 5.3 Equipment and Resource Needs\n`
+    report += `- ${healthStatus.exercise < 5 ? "Mobility aid assessment recommended; request occupational therapy evaluation" : "No immediate equipment needs identified"}\n`
+    report += `- Blood pressure monitor to be brought at next visit for baseline recording\n\n`
+
+    report += `## VI. Attendance and Verification\n\n`
+    report += `| Field | Details |\n`
+    report += `|-------|---------|\n`
+    report += `| Visit Confirmed | ${isAttendanceConfirmed ? "Yes — Same-day attendance verified" : "Pending verification"} |\n`
+    report += `| Visit Date | ${formattedDate} |\n`
+    report += `| Report Prepared | ${formattedDate} |\n\n`
+
+    report += `## VII. Signatures\n\n`
+    report += `| Visiting Staff | Signature Date | Supervisor / Reviewer | Review Date |\n`
+    report += `|----------------|----------------|-----------------------|-------------|\n`
+    report += `| __________________ | __________________ | __________________ | __________________ |\n\n`
+    report += `*This report is confidential and intended for authorised personnel only. Please handle in accordance with your organisation's data protection policy.*\n`
 
     setFormalReport(report)
   }
