@@ -127,16 +127,13 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
           content: `Good. I've recorded your response. Now let's proceed to the next question.`
         }
         const nextQuestion: Message = {
-          id: `q-${assessmentQuestions[nextIndex].id}`,
+          id: `q-${assessmentQuestions[nextIndex].id}-${Date.now()}`,
           role: "ai",
           timestamp: new Date(),
           content: assessmentQuestions[nextIndex].question,
           questionId: assessmentQuestions[nextIndex].id
         }
         setMessages(prev => [...prev, aiResponse, nextQuestion])
-      } else {
-        const completeMessage: Message = {
-          id: "complete",
           role: "ai",
           timestamp: new Date(),
           content: "Excellent! You have completed all the assessment questions. Please review and set the completion status for each question below, then tap 'Export Report' to generate the reports."
@@ -358,7 +355,7 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
           content: `I've captured the text from your photo. Let's continue with the next question.`
         }
         const nextQuestion: Message = {
-          id: `q-${assessmentQuestions[nextIndex].id}`,
+          id: `q-${assessmentQuestions[nextIndex].id}-${Date.now()}`,
           role: "ai",
           timestamp: new Date(),
           content: assessmentQuestions[nextIndex].question,

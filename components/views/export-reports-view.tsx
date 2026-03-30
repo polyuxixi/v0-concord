@@ -595,127 +595,116 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
           </div>
         </TabsContent>
 
-        {/* Creative Report Tab - Canvas is the exported text report */}
-        <TabsContent value="whatsapp" className="mt-4 space-y-4">
-          {/* Drawing Tools - Light Slate Blue Style */}
-          <Card className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 shadow-sm border-slate-200">
-            <CardHeader className="pb-2 border-b border-slate-100">
-              <CardTitle className="text-sm flex items-center justify-between text-slate-700">
-                <span className="flex items-center gap-2">
+        {/* Creative Report Tab - tools and canvas unified in one card */}
+        <TabsContent value="whatsapp" className="mt-4">
+          <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
+            {/* Toolbar header */}
+            <CardHeader className="pb-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-blue-50/60 to-indigo-50/60">
+              <div className="flex items-center justify-between mb-3">
+                <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
                   <Palette className="h-4 w-4 text-primary" />
-                  Creative Tools - Annotate Report
-                </span>
-                <Button
-                  variant={isDrawMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsDrawMode(!isDrawMode)}
-                  className={cn(
-                    "gap-1",
-                    isDrawMode && "bg-primary"
+                  Creative Report
+                  {(isDrawMode || selectedSticker) && (
+                    <Badge className="text-xs bg-primary/10 text-primary border border-primary/20">
+                      {selectedSticker ? "Tap report to place sticker" : "Draw mode on"}
+                    </Badge>
                   )}
-                >
-                  <Edit3 className="h-3 w-3" />
-                  {isDrawMode ? "Drawing On" : "Draw"}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-3">
-              {/* Colors */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-600 font-medium">Color:</span>
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setBrushColor(color)}
-                    className={cn(
-                      "h-7 w-7 rounded-full border-2 transition-all shadow-sm",
-                      brushColor === color ? "border-slate-800 scale-110 ring-2 ring-slate-300" : "border-white"
-                    )}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setBrushColor("#ffffff")}
-                  className="h-7 w-7 border-slate-200"
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-
-              {/* Brush Size */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-600 font-medium">Size:</span>
-                <Slider
-                  value={brushSize}
-                  onValueChange={setBrushSize}
-                  min={1}
-                  max={20}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-xs font-medium w-6 text-center bg-slate-100 rounded px-1 py-0.5">{brushSize[0]}</span>
-              </div>
-
-              {/* Stickers */}
-              <div>
-                <p className="text-xs text-slate-600 font-medium mb-2">Stickers (tap to select, then tap on report):</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {stickers.map((sticker) => {
-                    const Icon = sticker.icon
-                    return (
-                      <button
-                        key={sticker.id}
-                        onClick={() => setSelectedSticker(sticker.id === selectedSticker ? null : sticker.id)}
-                        className={cn(
-                          "flex flex-col items-center gap-1 p-2 rounded-xl transition-all border",
-                          selectedSticker === sticker.id
-                            ? "bg-primary/10 border-primary ring-2 ring-primary/30"
-                            : "bg-white border-slate-200 hover:bg-slate-50"
-                        )}
-                      >
-                        <Icon className={cn("h-6 w-6", sticker.color)} />
-                        <span className="text-[10px] text-slate-500">
-                          {sticker.label}
-                        </span>
-                      </button>
-                    )
-                  })}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={isDrawMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setIsDrawMode(!isDrawMode); setSelectedSticker(null) }}
+                    className={cn("gap-1 h-8", isDrawMode && "bg-primary")}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    {isDrawMode ? "Drawing" : "Draw"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearDrawings}
+                    className="h-8 gap-1 border-slate-200 text-slate-600"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Clear
+                  </Button>
                 </div>
               </div>
 
-              {/* Clear Button */}
-              <Button variant="outline" size="sm" onClick={clearDrawings} className="w-full border-slate-200 text-slate-600 hover:bg-slate-50">
-                <Trash2 className="h-4 w-4 mr-1" />
-                Clear All Annotations
-              </Button>
-            </CardContent>
-          </Card>
+              {/* Color swatches + brush size inline */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => { setBrushColor(color); setIsDrawMode(true); setSelectedSticker(null) }}
+                      className={cn(
+                        "h-6 w-6 rounded-full border-2 transition-all shadow-sm",
+                        brushColor === color && isDrawMode
+                          ? "border-slate-700 scale-125 ring-2 ring-slate-300"
+                          : "border-white hover:scale-110"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <button
+                    onClick={() => { setBrushColor("#ffffff"); setIsDrawMode(true); setSelectedSticker(null) }}
+                    className={cn(
+                      "h-6 w-6 rounded-full border-2 border-slate-300 flex items-center justify-center transition-all shadow-sm hover:scale-110",
+                      brushColor === "#ffffff" && isDrawMode && "border-slate-700 scale-125 ring-2 ring-slate-300"
+                    )}
+                    title="Eraser"
+                  >
+                    <Eraser className="h-3 w-3 text-slate-500" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 flex-1 min-w-32">
+                  <span className="text-xs text-slate-500 shrink-0">Size</span>
+                  <Slider
+                    value={brushSize}
+                    onValueChange={setBrushSize}
+                    min={1}
+                    max={20}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-xs font-medium w-5 text-center text-slate-600">{brushSize[0]}</span>
+                </div>
+              </div>
 
-          {/* Creative Report Canvas - The Exported Text Report */}
-          <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
-            <CardHeader className="pb-2 bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/50 border-b border-slate-100">
-              <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
-                <FileText className="h-4 w-4 text-primary" />
-                Creative Report Canvas
-                {(isDrawMode || selectedSticker) && (
-                  <Badge className="ml-auto text-xs bg-primary/10 text-primary border-primary/20">
-                    {selectedSticker ? "Tap to place sticker" : "Draw directly on report"}
-                  </Badge>
-                )}
-              </CardTitle>
-              <p className="text-xs text-slate-500 mt-1">
-                The exported report is your canvas - draw and add stickers directly on it
-              </p>
+              {/* Sticker row */}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="text-xs text-slate-500 shrink-0">Stickers:</span>
+                {stickers.map((sticker) => {
+                  const Icon = sticker.icon
+                  return (
+                    <button
+                      key={sticker.id}
+                      onClick={() => { setSelectedSticker(sticker.id === selectedSticker ? null : sticker.id); setIsDrawMode(false) }}
+                      title={sticker.label}
+                      className={cn(
+                        "h-8 w-8 rounded-lg flex items-center justify-center border transition-all",
+                        selectedSticker === sticker.id
+                          ? "bg-primary/10 border-primary ring-2 ring-primary/30 scale-110"
+                          : "bg-white border-slate-200 hover:bg-slate-50"
+                      )}
+                    >
+                      <Icon className={cn("h-5 w-5", sticker.color)} />
+                    </button>
+                  )
+                })}
+              </div>
             </CardHeader>
+
+            {/* The report IS the canvas - drawing goes directly on top of it */}
             <CardContent className="relative p-0">
-              {/* Report Container with Drawing Overlay - Formal Report as Canvas */}
-              <div 
+              <div
                 ref={containerRef}
                 className={cn(
-                  "relative overflow-hidden select-none",
-                  (isDrawMode || selectedSticker) && "cursor-crosshair"
+                  "relative select-none",
+                  isDrawMode && "cursor-crosshair",
+                  selectedSticker && "cursor-cell"
                 )}
                 onMouseDown={handlePointerDown}
                 onMouseMove={handlePointerMove}
@@ -725,20 +714,20 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                 onTouchMove={handlePointerMove}
                 onTouchEnd={handlePointerUp}
               >
-                {/* The Formal Report Text as Canvas Background */}
-                <div 
+                {/* Report text - the canvas background */}
+                <div
                   className={cn(
-                    "min-h-[450px] p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-700 bg-white",
+                    "min-h-[520px] p-5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-700 bg-white",
                     (isDrawMode || selectedSticker) && "pointer-events-none"
                   )}
                 >
                   {formalReport}
                 </div>
 
-                {/* Drawing Overlay SVG */}
-                <svg 
+                {/* SVG drawing layer - sits directly over the report */}
+                <svg
                   className="absolute inset-0 w-full h-full pointer-events-none"
-                  style={{ minHeight: "450px" }}
+                  style={{ minHeight: "520px" }}
                 >
                   {drawingPaths.map((path, index) => (
                     <path
@@ -763,7 +752,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                   )}
                 </svg>
 
-                {/* Placed Stickers Overlay */}
+                {/* Sticker layer */}
                 {placedStickers.map((placed) => {
                   const sticker = stickers.find(s => s.id === placed.stickerId)
                   if (!sticker) return null
@@ -771,7 +760,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                   return (
                     <div
                       key={placed.id}
-                      className={cn("absolute pointer-events-none drop-shadow-lg", sticker.color)}
+                      className={cn("absolute pointer-events-none drop-shadow-md", sticker.color)}
                       style={{ left: placed.x - 16, top: placed.y - 16 }}
                     >
                       <Icon className="h-8 w-8" />
@@ -780,16 +769,16 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                 })}
               </div>
 
-              {/* Actions - Light Slate Blue Style */}
+              {/* Action buttons at the bottom of the single card */}
               <div className="flex gap-2 p-4 bg-gradient-to-r from-slate-50 via-blue-50/30 to-indigo-50/30 border-t border-slate-100">
-                <Button 
+                <Button
                   onClick={handleShareWhatsApp}
                   className="flex-1 gap-2 bg-gradient-to-r from-slate-600 via-blue-600 to-indigo-600 hover:from-slate-700 hover:via-blue-700 hover:to-indigo-700"
                 >
                   <Share2 className="h-4 w-4" />
-                  Share Report
+                  Share
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={handleDownloadWhatsAppImage}
                   className="flex-1 gap-2 border-slate-300 hover:bg-slate-50"
