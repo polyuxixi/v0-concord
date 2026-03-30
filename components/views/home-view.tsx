@@ -64,57 +64,57 @@ export function HomeView({ onStartChat }: HomeViewProps) {
   const timeSlots = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]
 
   return (
-    <div className="flex flex-col gap-6 pb-24">
+    <div className="flex flex-col gap-8 pb-28">
       {/* Header with Date and Time */}
-      <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/20 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2 text-primary">
-            <Calendar className="h-5 w-5" />
-            <span className="font-semibold">Today</span>
+      <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/20 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3 text-primary">
+            <Calendar className="h-6 w-6" />
+            <span className="text-lg font-semibold">Today</span>
           </div>
-          <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
+          <Badge variant="secondary" className="text-xl font-bold px-4 py-2">
             {currentTime}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">{today}</p>
-        <div className="mt-4 flex items-center gap-3">
+        <p className="text-base text-muted-foreground mt-1">{today}</p>
+        <div className="mt-5 flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-emerald-500" />
-            <span className="text-xs text-muted-foreground">Completed</span>
+            <div className="h-4 w-4 rounded-full bg-emerald-500" />
+            <span className="text-sm text-muted-foreground">Completed</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-amber-500" />
-            <span className="text-xs text-muted-foreground">In Progress</span>
+            <div className="h-4 w-4 rounded-full bg-amber-500" />
+            <span className="text-sm text-muted-foreground">In Progress</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Pending</span>
+            <div className="h-4 w-4 rounded-full bg-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Pending</span>
           </div>
         </div>
       </div>
 
       {/* Visual Timeline Schedule */}
       <div>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
+        <h2 className="text-xl font-semibold mb-5 flex items-center gap-3">
+          <Clock className="h-6 w-6 text-primary" />
           Visit Schedule
         </h2>
 
         {/* Timeline Header */}
-        <div className="relative mb-6 px-2">
-          <div className="flex justify-between text-xs text-muted-foreground mb-2">
+        <div className="relative mb-8 px-3">
+          <div className="flex justify-between text-sm text-muted-foreground mb-3">
             {timeSlots.map((time) => (
-              <span key={time}>{time}</span>
+              <span key={time} className="font-medium">{time}</span>
             ))}
           </div>
-          <div className="relative h-2 bg-muted rounded-full">
+          <div className="relative h-3 bg-muted rounded-full">
             {sortedClients.map((client) => {
               const position = getTimelinePosition(client.scheduledTime)
               return (
                 <div
                   key={client.id}
                   className={cn(
-                    "absolute top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-background cursor-pointer transition-transform hover:scale-125",
+                    "absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-background cursor-pointer transition-transform hover:scale-125",
                     client.status === "completed" && "bg-emerald-500",
                     client.status === "in-progress" && "bg-amber-500",
                     client.status === "pending" && "bg-muted-foreground"
@@ -128,7 +128,7 @@ export function HomeView({ onStartChat }: HomeViewProps) {
         </div>
 
         {/* Client Cards */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {sortedClients.map((client, index) => (
             <Card 
               key={client.id}
@@ -142,51 +142,51 @@ export function HomeView({ onStartChat }: HomeViewProps) {
                 <div className="flex">
                   {/* Time indicator */}
                   <div className={cn(
-                    "w-20 shrink-0 flex flex-col items-center justify-center py-4 text-white",
+                    "w-24 shrink-0 flex flex-col items-center justify-center py-5 text-white",
                     client.status === "completed" && "bg-emerald-500",
                     client.status === "in-progress" && "bg-amber-500",
                     client.status === "pending" && "bg-muted-foreground"
                   )}>
-                    <Clock className="h-4 w-4 mb-1" />
-                    <span className="text-sm font-bold">{client.scheduledTime}</span>
-                    <span className="text-xs opacity-80">#{index + 1}</span>
+                    <Clock className="h-5 w-5 mb-1" />
+                    <span className="text-base font-bold">{client.scheduledTime}</span>
+                    <span className="text-sm opacity-80">#{index + 1}</span>
                   </div>
 
                   {/* Client Info */}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 p-5">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary" />
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-semibold">{client.name}</h3>
+                            <h3 className="text-lg font-semibold">{client.name}</h3>
                             <Badge 
                               variant="outline" 
-                              className={cn("text-xs capitalize", getStatusColor(client.status))}
+                              className={cn("text-sm capitalize mt-1", getStatusColor(client.status))}
                             >
-                              {client.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                              {client.status === "pending" && <Circle className="h-3 w-3 mr-1" />}
+                              {client.status === "completed" && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                              {client.status === "pending" && <Circle className="h-3.5 w-3.5 mr-1" />}
                               {client.status}
                             </Badge>
                           </div>
                         </div>
                         
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                           <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
-                            <span className="line-clamp-1">{client.address}</span>
+                            <MapPin className="h-5 w-5 shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{client.address}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 shrink-0" />
+                            <Phone className="h-5 w-5 shrink-0" />
                             <span>{client.phone}</span>
                           </div>
                         </div>
                       </div>
                       
                       <Button 
-                        size="sm"
+                        size="lg"
                         onClick={(e) => {
                           e.stopPropagation()
                           onStartChat(client)
@@ -194,7 +194,7 @@ export function HomeView({ onStartChat }: HomeViewProps) {
                         className="shrink-0"
                       >
                         Start
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        <ChevronRight className="h-5 w-5 ml-1" />
                       </Button>
                     </div>
                   </div>
@@ -206,29 +206,29 @@ export function HomeView({ onStartChat }: HomeViewProps) {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         <Card className="bg-emerald-50 border-emerald-200">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-emerald-600">
+          <CardContent className="p-5 text-center">
+            <p className="text-3xl font-bold text-emerald-600">
               {clients.filter(c => c.status === "completed").length}
             </p>
-            <p className="text-xs text-emerald-600/80">Completed</p>
+            <p className="text-sm text-emerald-600/80 mt-1">Completed</p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-amber-600">
+          <CardContent className="p-5 text-center">
+            <p className="text-3xl font-bold text-amber-600">
               {clients.filter(c => c.status === "in-progress").length}
             </p>
-            <p className="text-xs text-amber-600/80">In Progress</p>
+            <p className="text-sm text-amber-600/80 mt-1">In Progress</p>
           </CardContent>
         </Card>
         <Card className="bg-secondary">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-muted-foreground">
+          <CardContent className="p-5 text-center">
+            <p className="text-3xl font-bold text-muted-foreground">
               {clients.filter(c => c.status === "pending").length}
             </p>
-            <p className="text-xs text-muted-foreground">Pending</p>
+            <p className="text-sm text-muted-foreground mt-1">Pending</p>
           </CardContent>
         </Card>
       </div>
