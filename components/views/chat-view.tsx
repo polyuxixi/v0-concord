@@ -134,6 +134,9 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
           questionId: assessmentQuestions[nextIndex].id
         }
         setMessages(prev => [...prev, aiResponse, nextQuestion])
+      } else {
+        const completeMessage: Message = {
+          id: "complete",
           role: "ai",
           timestamp: new Date(),
           content: "Excellent! You have completed all the assessment questions. Please review and set the completion status for each question below, then tap 'Export Report' to generate the reports."
