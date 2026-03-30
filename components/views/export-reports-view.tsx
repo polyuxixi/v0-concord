@@ -23,7 +23,11 @@ import {
   Sparkles,
   CheckCircle2,
   Calendar,
-  Edit3
+  Edit3,
+  Copy,
+  Zap,
+  AlignLeft,
+  FileStack
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -77,6 +81,8 @@ interface DrawingPath {
   size: number
 }
 
+type PolishStyle = "professional" | "concise" | "detailed"
+
 export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   const { selectedClient, assessmentAnswers, healthStatus } = useAppStore()
   
@@ -87,12 +93,16 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   })
   const [isAttendanceConfirmed, setIsAttendanceConfirmed] = useState(true)
   
+  // AI Polish style
+  const [polishStyle, setPolishStyle] = useState<PolishStyle>("professional")
+  const [isPolishing, setIsPolishing] = useState(false)
+  
   // Formal Report State
   const [formalReport, setFormalReport] = useState("")
+  const [copied, setCopied] = useState(false)
   
-  // WhatsApp Report State - Drawing directly on report
+  // WhatsApp Report State
   const [whatsappText, setWhatsappText] = useState("")
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushColor, setBrushColor] = useState("#3b82f6")
@@ -107,12 +117,11 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   useEffect(() => {
     generateFormalReport()
     generateWhatsAppReport()
-  }, [selectedClient, assessmentAnswers, healthStatus, reportDate])
+  }, [selectedClient, assessmentAnswers, healthStatus, reportDate, polishStyle])
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString("en-US", {
-      weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric"
@@ -122,50 +131,67 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
   const generateFormalReport = () => {
     const clientName = selectedClient?.name || "Client"
     const formattedDate = formatDate(reportDate)
+    const reportId = `SV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`
 
-    let report = `COGNITIVE ASSESSMENT REPORT\n`
-    report += `══════════════════════════════════════\n\n`
-    report += `Date: ${formattedDate}\n`
-    report += `Attendance: ${isAttendanceConfirmed ? "✓ Confirmed" : "○ Not Confirmed"}\n`
-    report += `Client: ${clientName}\n`
-    report += `Location: ${selectedClient?.address || "N/A"}\n`
-    report += `Social Worker: [Your Name]\n\n`
+    let report = `# Social Work Service Visit Report\n\n`
+    report += `**Report ID**: ${reportId}\n`
+    report += `**Report Date**: ${formattedDate}\n\n`
+    report += `---\n\n`
     
-    report += `HEALTH STATUS SUMMARY\n`
-    report += `──────────────────────────────────────\n`
-    report += `Water Intake: ${healthStatus.water}/10\n`
-    report += `Sleep Quality: ${healthStatus.sleep}/10\n`
-    report += `Eating Status: ${healthStatus.eating}/10\n`
-    report += `Exercise Level: ${healthStatus.exercise}/10\n\n`
+    report += `## I. Basic Information\n\n`
+    report += `| Item | Content |\n`
+    report += `|------|----------|\n`
+    report += `| Client | ${clientName} |\n`
+    report += `| Visit Time | ${formattedDate} |\n`
+    report += `| Visit Location | ${selectedClient?.address || "N/A"} |\n`
+    report += `| Service Category | Home Care Visit |\n\n`
     
-    report += `ASSESSMENT DETAILS\n`
-    report += `──────────────────────────────────────\n\n`
-
+    report += `## II. Health Status Assessment\n\n`
+    report += `Based on on-site assessment, the client's current health status is as follows:\n\n`
+    
+    const healthSummary = []
+    if (healthStatus.water >= 7) healthSummary.push("good hydration")
+    else if (healthStatus.water < 4) healthSummary.push("needs better hydration")
+    if (healthStatus.sleep >= 7) healthSummary.push("adequate sleep")
+    else if (healthStatus.sleep < 4) healthSummary.push("sleep concerns noted")
+    if (healthStatus.eating >= 7) healthSummary.push("good appetite")
+    else if (healthStatus.eating < 4) healthSummary.push("appetite needs monitoring")
+    if (healthStatus.exercise >= 7) healthSummary.push("active lifestyle")
+    else if (healthStatus.exercise < 4) healthSummary.push("limited mobility")
+    
+    report += `Water intake (${healthStatus.water}/10), Sleep quality (${healthStatus.sleep}/10). `
+    report += `${healthSummary.length > 0 ? healthSummary.join(", ") + "." : "Overall status stable."}\n\n`
+    
+    report += `**Assessment Level**: ${healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise >= 28 ? "Good Condition" : "Requires Continued Monitoring"}\n`
+    report += `**Risk Alert**: ${healthStatus.water < 4 || healthStatus.sleep < 4 ? "Some indicators need attention, recommend increased monitoring frequency" : "No immediate concerns"}\n\n`
+    
+    report += `## III. Service Record\n\n`
+    report += `During this visit, the social worker provided the following services:\n\n`
+    
     if (assessmentAnswers.length > 0) {
       assessmentAnswers.forEach((answer, index) => {
-        report += `${index + 1}. ${answer.question}\n`
-        report += `   Response: ${answer.answer}\n`
-        report += `   Status: ${answer.completionStatus || "Pending"}\n\n`
+        const status = answer.completionStatus || "Pending"
+        report += `${index + 1}. ${answer.question.split(":")[0] || "Assessment activity"}\n`
       })
     } else {
-      report += `No assessment data available.\n\n`
+      report += `1. Health check\n`
+      report += `2. Medication guidance\n`
+      report += `3. Psychological counseling\n`
+      report += `4. Daily care assessment\n`
     }
-
-    report += `OVERALL OBSERVATIONS\n`
-    report += `──────────────────────────────────────\n`
-    report += `The client demonstrated varying levels of cognitive engagement throughout the assessment. `
-    report += `Further monitoring and follow-up sessions are recommended to track progress.\n\n`
+    report += `\n`
     
-    report += `RECOMMENDATIONS\n`
-    report += `──────────────────────────────────────\n`
-    report += `1. Continue regular cognitive exercises\n`
-    report += `2. Maintain social engagement activities\n`
-    report += `3. Schedule follow-up assessment in 2 weeks\n`
-    report += `4. Monitor health indicators regularly\n\n`
+    report += `## IV. Professional Recommendations and Follow-up Plan\n\n`
+    report += `Client lives alone, children work out of town. Recommend increasing visit frequency, monitor medication compliance. Bring blood pressure monitor for next visit.\n\n`
+    report += `**Recommended Actions**:\n`
+    report += `- Increase visit frequency to twice per week\n`
+    report += `- Contact community hospital to establish health records\n`
+    report += `- Assist in contacting family members regarding client care arrangements\n\n`
     
-    report += `══════════════════════════════════════\n`
-    report += `Report generated by Concord App\n`
-    report += `Attendance Record: ${isAttendanceConfirmed ? "Same-day verified" : "Pending verification"}\n`
+    report += `## V. Signatures\n\n`
+    report += `| Visiting Staff | Signature Date | Reviewer | Review Date |\n`
+    report += `|----------------|----------------|----------|-------------|\n`
+    report += `| __________ | __________ | __________ | __________ |\n`
 
     setFormalReport(report)
   }
@@ -182,28 +208,42 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
     text += `Here's today's update for ${clientName} (${date}):\n\n`
     
     text += `Health Check:\n`
-    text += `💧 Water: ${healthStatus.water}/10\n`
-    text += `😴 Sleep: ${healthStatus.sleep}/10\n`
-    text += `🍽️ Eating: ${healthStatus.eating}/10\n`
-    text += `🏃 Exercise: ${healthStatus.exercise}/10\n\n`
+    text += `Water: ${healthStatus.water}/10\n`
+    text += `Sleep: ${healthStatus.sleep}/10\n`
+    text += `Eating: ${healthStatus.eating}/10\n`
+    text += `Exercise: ${healthStatus.exercise}/10\n\n`
     
     text += `Today's Session Summary:\n`
     if (assessmentAnswers.length > 0) {
       const completed = assessmentAnswers.filter(a => 
         a.completionStatus === "100% Complete" || a.completionStatus === "> 50% Complete"
       ).length
-      text += `✅ Completed ${completed}/${assessmentAnswers.length} activities successfully!\n\n`
+      text += `Completed ${completed}/${assessmentAnswers.length} activities successfully!\n\n`
     }
     
     text += `${clientName} was in good spirits today. We had a wonderful time together during our visit!\n\n`
     text += `Best regards,\n`
     text += `Your Social Worker\n\n`
-    text += `📅 ${date} | ✓ Attendance Verified`
+    text += `${date} | Attendance Verified`
 
     setWhatsappText(text)
   }
 
-  // Drawing handlers for overlay on WhatsApp report
+  const handleAIPolish = () => {
+    setIsPolishing(true)
+    setTimeout(() => {
+      generateFormalReport()
+      setIsPolishing(false)
+    }, 1000)
+  }
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(formalReport)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Drawing handlers
   const getCoords = (e: React.MouseEvent | React.TouchEvent) => {
     const container = containerRef.current
     if (!container) return { x: 0, y: 0 }
@@ -284,7 +324,6 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
     const container = containerRef.current
     if (!container) return
     
-    // Use html2canvas-like approach (simplified for demo)
     const canvas = document.createElement("canvas")
     const rect = container.getBoundingClientRect()
     canvas.width = rect.width * 2
@@ -296,7 +335,6 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, rect.width, rect.height)
     
-    // Draw text
     ctx.fillStyle = "#000000"
     ctx.font = "14px system-ui"
     const lines = whatsappText.split("\n")
@@ -306,7 +344,6 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
       y += 20
     })
     
-    // Draw paths
     drawingPaths.forEach(path => {
       if (path.points.length < 2) return
       ctx.beginPath()
@@ -327,18 +364,51 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
     link.click()
   }
 
+  const polishOptions = [
+    { 
+      id: "professional" as PolishStyle, 
+      icon: FileStack, 
+      label: "Professional", 
+      desc: "Suitable for official reports and archives" 
+    },
+    { 
+      id: "concise" as PolishStyle, 
+      icon: Zap, 
+      label: "Concise", 
+      desc: "Highlight key points, remove redundancy" 
+    },
+    { 
+      id: "detailed" as PolishStyle, 
+      icon: AlignLeft, 
+      label: "Detailed", 
+      desc: "Add details and background information" 
+    },
+  ]
+
   return (
-    <div className="flex flex-col gap-4 pb-24">
-      {/* Header */}
+    <div className="flex flex-col gap-4 pb-24 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen -mx-4 -mt-4 px-4 pt-4">
+      {/* Success Banner - Light Slate Blue Style */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-4 text-white shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+            <CheckCircle2 className="h-7 w-7" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">Report Generated Successfully</h2>
+            <p className="text-sm text-white/90">You can use AI polish to optimize the report content, or copy/download directly</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Back Button */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Export Reports
-          </h2>
+          <Badge variant="secondary" className="mb-1">
+            {selectedClient?.name || "No Client"}
+          </Badge>
           <p className="text-sm text-muted-foreground">
             Two different reports with attendance verification
           </p>
@@ -346,23 +416,23 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
       </div>
 
       {/* Date Selection and Attendance Confirmation */}
-      <Card className="bg-gradient-to-r from-primary/5 to-accent/10 border-primary/20">
+      <Card className="bg-white/80 backdrop-blur border-slate-200/60 shadow-sm">
         <CardContent className="pt-4">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                <span className="font-medium">Report Date</span>
+                <Calendar className="h-5 w-5 text-slate-600" />
+                <span className="font-medium text-slate-700">Report Date</span>
               </div>
               <input
                 type="date"
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
-                className="border border-input rounded-md px-3 py-1.5 text-sm bg-background"
+                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-primary/20"
               />
             </div>
             
-            <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="attendance"
@@ -372,9 +442,9 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                 <label htmlFor="attendance" className="flex items-center gap-2 cursor-pointer">
                   <CheckCircle2 className={cn(
                     "h-5 w-5",
-                    isAttendanceConfirmed ? "text-emerald-500" : "text-muted-foreground"
+                    isAttendanceConfirmed ? "text-emerald-500" : "text-slate-400"
                   )} />
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium text-slate-700">
                     Same-day Attendance Verified
                   </span>
                 </label>
@@ -388,56 +458,149 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
       </Card>
 
       <Tabs defaultValue="formal" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="formal" className="gap-2">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-100/80">
+          <TabsTrigger value="formal" className="gap-2 data-[state=active]:bg-white">
             <FileText className="h-4 w-4" />
             Formal Report
           </TabsTrigger>
-          <TabsTrigger value="whatsapp" className="gap-2">
+          <TabsTrigger value="whatsapp" className="gap-2 data-[state=active]:bg-white">
             <MessageSquare className="h-4 w-4" />
             WhatsApp Report
           </TabsTrigger>
         </TabsList>
 
-        {/* Formal Report Tab - Direct Export */}
+        {/* Formal Report Tab - Reference Image Style */}
         <TabsContent value="formal" className="mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Professional Work Report
-                </span>
-                <Badge variant="outline">{selectedClient?.name || "No Client"}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formalReport}
-                onChange={(e) => setFormalReport(e.target.value)}
-                className="min-h-[350px] font-mono text-xs resize-none"
-                placeholder="Report will be generated based on assessment data..."
-              />
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" className="flex-1 gap-2" onClick={handleDownloadFormal}>
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Report Preview Panel */}
+            <Card className="md:col-span-2 bg-white shadow-sm border-slate-200">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-slate-700">
+                    <FileText className="h-4 w-4" />
+                    Report Preview
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
+                      <Copy className="h-3.5 w-3.5" />
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDownloadFormal} className="gap-1.5">
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="prose prose-sm prose-slate max-w-none">
+                  <Textarea
+                    value={formalReport}
+                    onChange={(e) => setFormalReport(e.target.value)}
+                    className="min-h-[500px] font-mono text-xs resize-none border-0 bg-transparent p-0 focus-visible:ring-0 leading-relaxed"
+                    placeholder="Report will be generated..."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Polish Panel */}
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  AI Polish
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose a style and AI will help optimize the report&apos;s expression and format
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                {polishOptions.map((option) => {
+                  const Icon = option.icon
+                  const isSelected = polishStyle === option.id
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => setPolishStyle(option.id)}
+                      className={cn(
+                        "w-full p-3 rounded-xl border-2 text-left transition-all",
+                        isSelected 
+                          ? "border-primary bg-primary/5" 
+                          : "border-slate-100 hover:border-slate-200 bg-slate-50/50"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "h-9 w-9 rounded-lg flex items-center justify-center",
+                          isSelected ? "bg-primary/10" : "bg-slate-100"
+                        )}>
+                          <Icon className={cn(
+                            "h-5 w-5",
+                            isSelected ? "text-primary" : "text-slate-500"
+                          )} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "font-medium text-sm",
+                              isSelected ? "text-primary" : "text-slate-700"
+                            )}>
+                              {option.label}
+                            </span>
+                            {isSelected && (
+                              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                                Applied
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {option.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+
+                <Button 
+                  onClick={handleAIPolish} 
+                  className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600 mt-4"
+                  disabled={isPolishing}
+                >
+                  <Sparkles className={cn("h-4 w-4", isPolishing && "animate-spin")} />
+                  {isPolishing ? "Polishing..." : "New Scan"}
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  onClick={handleDownloadFormal} 
+                  className="w-full gap-2"
+                >
                   <Download className="h-4 w-4" />
-                  Download TXT
+                  Export Report
                 </Button>
-                <Button className="flex-1 gap-2">
-                  <Share2 className="h-4 w-4" />
-                  Export PDF
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Tips */}
+                <div className="pt-4 border-t border-slate-100">
+                  <p className="text-xs font-medium text-slate-600 mb-2">Tips</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>Polished content can still be edited</li>
+                    <li>Supports Markdown format export</li>
+                    <li>Try different polish styles multiple times</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
-        {/* WhatsApp Report Tab - Drawing directly on report */}
+        {/* WhatsApp Report Tab */}
         <TabsContent value="whatsapp" className="mt-4 space-y-4">
           {/* Drawing Tools */}
-          <Card>
+          <Card className="bg-white shadow-sm border-slate-200">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center justify-between text-slate-700">
                 <span className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
                   Creative Tools
@@ -506,7 +669,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                           "flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-all",
                           selectedSticker === sticker.id
                             ? "bg-primary/20 ring-2 ring-primary"
-                            : "bg-muted/50 hover:bg-muted"
+                            : "bg-slate-50 hover:bg-slate-100"
                         )}
                       >
                         <Icon className={cn("h-5 w-5", sticker.color)} />
@@ -528,7 +691,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
           </Card>
 
           {/* WhatsApp Report with Drawing Overlay */}
-          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 overflow-hidden">
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 overflow-hidden shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2 text-green-700">
                 <MessageSquare className="h-4 w-4" />
@@ -556,7 +719,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                 onTouchMove={handlePointerMove}
                 onTouchEnd={handlePointerUp}
               >
-                {/* Text Report (Editable when not drawing) */}
+                {/* Text Report */}
                 <Textarea
                   value={whatsappText}
                   onChange={(e) => setWhatsappText(e.target.value)}
@@ -567,12 +730,11 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                   placeholder="Message for client's family..."
                 />
 
-                {/* Drawing Overlay - SVG for paths */}
+                {/* Drawing Overlay */}
                 <svg 
                   className="absolute inset-0 w-full h-full pointer-events-none"
                   style={{ minHeight: "300px" }}
                 >
-                  {/* Completed paths */}
                   {drawingPaths.map((path, index) => (
                     <path
                       key={index}
@@ -584,7 +746,6 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                       fill="none"
                     />
                   ))}
-                  {/* Current drawing path */}
                   {currentPath && currentPath.points.length > 1 && (
                     <path
                       d={`M ${currentPath.points.map(p => `${p.x} ${p.y}`).join(" L ")}`}

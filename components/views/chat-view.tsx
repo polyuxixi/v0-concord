@@ -13,7 +13,8 @@ import {
   FileText,
   MessageSquare,
   Bot,
-  User
+  User,
+  Download
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -623,17 +624,24 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
           {isRecording ? "Tap to stop recording" : "Tap microphone to start AI-guided conversation"}
         </p>
 
-        {/* Export Two Reports Button */}
-        {isComplete && (
-          <Button 
-            onClick={handleExportReports} 
-            className="w-full mt-4 gap-2" 
-            size="lg"
-          >
-            <FileText className="h-5 w-5" />
-            Export Two Reports
-            <MessageSquare className="h-5 w-5" />
-          </Button>
+        {/* Export Report Button - Always visible at bottom */}
+        <Button 
+          onClick={handleExportReports} 
+          className={cn(
+            "w-full mt-4 gap-2 bg-gradient-to-r from-slate-600 via-blue-600 to-indigo-600 hover:from-slate-700 hover:via-blue-700 hover:to-indigo-700",
+            completedAnswers.length === 0 && "opacity-50"
+          )}
+          size="lg"
+          disabled={completedAnswers.length === 0}
+        >
+          <FileText className="h-5 w-5" />
+          Export Report
+          <Download className="h-5 w-5" />
+        </Button>
+        {completedAnswers.length === 0 && (
+          <p className="text-center text-xs text-muted-foreground mt-2">
+            Complete at least one question to export report
+          </p>
         )}
       </div>
     </div>
