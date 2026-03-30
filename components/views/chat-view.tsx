@@ -34,8 +34,9 @@ interface Message {
   id: string
   role: "ai" | "user"
   content: string
+  timestamp: Date
   questionId?: string
-  source?: "voice" | "camera" | "text"
+  source?: "voice" | "camera" | "text" | "simulated"
 }
 
 interface HealthIcon {
@@ -72,10 +73,12 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
   const [completedAnswers, setCompletedAnswers] = useState<AssessmentAnswer[]>([])
   const [recognitionText, setRecognitionText] = useState("")
   const [isAiThinking, setIsAiThinking] = useState(false)
+  const [micAvailable, setMicAvailable] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const simulationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const { 
     setAssessmentAnswers, 
@@ -91,6 +94,7 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
       id: `user-${Date.now()}`,
       role: "user",
       content: answerText,
+      timestamp: new Date(),
       source: "voice"
     }
     setMessages(prev => [...prev, userMessage])
@@ -119,11 +123,13 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         const aiResponse: Message = {
           id: `ai-resp-${Date.now()}`,
           role: "ai",
+          timestamp: new Date(),
           content: `Good. I've recorded your response. Now let's proceed to the next question.`
         }
         const nextQuestion: Message = {
           id: `q-${assessmentQuestions[nextIndex].id}`,
           role: "ai",
+          timestamp: new Date(),
           content: assessmentQuestions[nextIndex].question,
           questionId: assessmentQuestions[nextIndex].id
         }
@@ -132,7 +138,8 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         const completeMessage: Message = {
           id: "complete",
           role: "ai",
-          content: "Excellent! You have completed all the assessment questions. Please review and set the completion status for each question below, then tap 'Export Two Reports' to generate the reports."
+          timestamp: new Date(),
+          content: "Excellent! You have completed all the assessment questions. Please review and set the completion status for each question below, then tap 'Export Report' to generate the reports."
         }
         setMessages(prev => [...prev, completeMessage])
       }
@@ -144,11 +151,13 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
       const welcomeMessage: Message = {
         id: "welcome",
         role: "ai",
+        timestamp: new Date(),
         content: `Hello! I will guide you through the cognitive assessment for ${client.name}. Tap the large microphone button to start voice input - I will automatically proceed to the next question after each of your responses.`
       }
       const firstQuestion: Message = {
         id: "q-1.0",
         role: "ai",
+        timestamp: new Date(),
         content: assessmentQuestions[0].question,
         questionId: assessmentQuestions[0].id
       }
@@ -209,7 +218,9 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
       }
 
       recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error:", event.error)
+        if (event.error === "not-allowed") {
+          setMicAvailable(false)
+        }
         setIsRecording(false)
         setIsListening(false)
       }
@@ -243,34 +254,60 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
   }
 
   const handleVoiceToggle = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser.")
+    // If already recording (simulation or real), stop it
+    if (isRecording) {
+      setIsRecording(false)
+      setIsListening(false)
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current)
+      if (simulationTimeoutRef.current) clearTimeout(simulationTimeoutRef.current)
+      recognitionRef.current?.stop()
+      if (recognitionText.trim()) {
+        const cleanText = recognitionText.replace(/\[.*\]$/, "").trim()
+        if (cleanText) processAnswer(cleanText)
+      }
+      setRecognitionText("")
       return
     }
 
-    if (isRecording) {
-      // Stop recording and process any pending text
-      recognitionRef.current.stop()
+    // If mic not available, use simulation mode
+    if (!recognitionRef.current || !micAvailable) {
+      setIsRecording(true)
+      setIsListening(false)
+      const currentQ = assessmentQuestions[Math.min(currentQuestionIndex, assessmentQuestions.length - 1)]
+      const simulatedResponses = [
+        "The client correctly identified today's date, month, and year. They recognised the current season as spring and knew their general location.",
+        "Client repeated all three objects successfully on the first attempt. After the delay, recalled two out of three items with prompting.",
+        "Client engaged well, recognised items from their past and shared a brief story about their childhood home.",
+        "Client recalled two of the three items: keys and cup. The third item (book) was forgotten after the delay.",
+        "Client shared memories of their hometown and family gatherings with visible emotional engagement.",
+        "Client named two out of three items correctly after the 10-minute delay."
+      ]
+      const simText = simulatedResponses[currentQuestionIndex] || "Client participated actively in the session and responded to all prompts."
+      let charIndex = 0
+      const typeInterval = setInterval(() => {
+        charIndex++
+        setRecognitionText(simText.slice(0, charIndex))
+        if (charIndex >= simText.length) {
+          clearInterval(typeInterval)
+          simulationTimeoutRef.current = setTimeout(() => {
+            processAnswer(simText)
+            setIsRecording(false)
+            setRecognitionText("")
+          }, 800)
+        }
+      }, 30)
+      return
+    }
+
+    // Real speech recognition
+    setIsRecording(true)
+    setIsListening(true)
+    setRecognitionText("")
+    try {
+      recognitionRef.current.start()
+    } catch {
       setIsRecording(false)
       setIsListening(false)
-      
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current)
-      }
-      
-      // Process any remaining text
-      if (recognitionText.trim()) {
-        const cleanText = recognitionText.replace(/\[.*\]$/, "").trim()
-        if (cleanText) {
-          processAnswer(cleanText)
-        }
-      }
-    } else {
-      // Start continuous listening mode
-      setIsRecording(true)
-      setIsListening(true)
-      setRecognitionText("")
-      recognitionRef.current.start()
     }
   }
 
@@ -289,6 +326,7 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
     const userMessage: Message = {
       id: `user-ocr-${Date.now()}`,
       role: "user",
+      timestamp: new Date(),
       content: simulatedOCRText,
       source: "camera"
     }
@@ -316,11 +354,13 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         const aiResponse: Message = {
           id: `ai-ocr-resp-${Date.now()}`,
           role: "ai",
+          timestamp: new Date(),
           content: `I've captured the text from your photo. Let's continue with the next question.`
         }
         const nextQuestion: Message = {
           id: `q-${assessmentQuestions[nextIndex].id}`,
           role: "ai",
+          timestamp: new Date(),
           content: assessmentQuestions[nextIndex].question,
           questionId: assessmentQuestions[nextIndex].id
         }
@@ -329,6 +369,7 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         const completeMessage: Message = {
           id: "complete-ocr",
           role: "ai",
+          timestamp: new Date(),
           content: "All questions completed! Please set the completion status for each question and export the reports."
         }
         setMessages(prev => [...prev, completeMessage])
@@ -434,10 +475,16 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
                 )}
                 {message.source && message.role === "user" && (
                   <Badge variant="secondary" className="mb-2 text-xs ml-2">
-                    {message.source === "voice" ? "Voice" : message.source === "camera" ? "OCR" : "Text"}
+                    {message.source === "voice" ? "Voice" : message.source === "camera" ? "OCR" : message.source === "simulated" ? "Demo" : "Text"}
                   </Badge>
                 )}
                 <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className={cn(
+                  "text-[10px] mt-1 opacity-60",
+                  message.role === "user" ? "text-right text-primary-foreground" : "text-muted-foreground"
+                )}>
+                  {message.timestamp.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
               {message.role === "user" && (
                 <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
@@ -621,8 +668,17 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
-          {isRecording ? "Tap to stop recording" : "Tap microphone to start AI-guided conversation"}
+          {isRecording
+            ? "Tap to stop recording"
+            : micAvailable
+              ? "Tap microphone to start AI-guided conversation"
+              : "Tap microphone to demo AI-guided conversation"}
         </p>
+        {!micAvailable && (
+          <p className="text-center text-xs text-amber-500 mt-1">
+            (Microphone permission denied - running in demo mode)
+          </p>
+        )}
 
         {/* Export Report Button - Always visible at bottom */}
         <Button 

@@ -76,7 +76,7 @@ export function HomeView({ onStartChat }: HomeViewProps) {
             {currentTime}
           </Badge>
         </div>
-        <p className="text-base text-muted-foreground mt-1">{today}</p>
+        <div className="text-base text-muted-foreground mt-1">{today}</div>
         <div className="mt-5 flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded-full bg-emerald-500" />

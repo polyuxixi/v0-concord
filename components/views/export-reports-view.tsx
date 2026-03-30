@@ -24,7 +24,7 @@ import {
   CheckCircle2,
   Calendar,
   Edit3,
-  Copy,
+  ClipboardCopy,
   Zap,
   AlignLeft,
   FileStack
@@ -482,7 +482,7 @@ export function ExportReportsView({ onBack }: ExportReportsViewProps) {
                   </span>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
-                      <Copy className="h-3.5 w-3.5" />
+                      <ClipboardCopy className="h-3.5 w-3.5" />
                       {copied ? "Copied!" : "Copy"}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleDownloadFormal} className="gap-1.5">
