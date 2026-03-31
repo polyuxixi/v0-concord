@@ -39,17 +39,17 @@ interface ReportViewProps {
 type PolishStyle = "professional" | "concise" | "detailed"
 
 const healthIcons = [
-  { key: "water" as const, icon: Droplets, label: "饮水", color: "text-sky-500", bgColor: "bg-sky-100", chartColor: "#0ea5e9" },
-  { key: "sleep" as const, icon: Moon, label: "睡眠", color: "text-indigo-500", bgColor: "bg-indigo-100", chartColor: "#6366f1" },
-  { key: "eating" as const, icon: Utensils, label: "饮食", color: "text-amber-500", bgColor: "bg-amber-100", chartColor: "#f59e0b" },
-  { key: "exercise" as const, icon: Dumbbell, label: "运动", color: "text-emerald-500", bgColor: "bg-emerald-100", chartColor: "#22c55e" },
+  { key: "water" as const, icon: Droplets, label: "Water", color: "text-sky-500", bgColor: "bg-sky-100", chartColor: "#0ea5e9" },
+  { key: "sleep" as const, icon: Moon, label: "Sleep", color: "text-indigo-500", bgColor: "bg-indigo-100", chartColor: "#6366f1" },
+  { key: "eating" as const, icon: Utensils, label: "Eating", color: "text-amber-500", bgColor: "bg-amber-100", chartColor: "#f59e0b" },
+  { key: "exercise" as const, icon: Dumbbell, label: "Exercise", color: "text-emerald-500", bgColor: "bg-emerald-100", chartColor: "#22c55e" },
 ]
 
 const chartConfig = {
-  water: { label: "饮水", color: "#0ea5e9" },
-  sleep: { label: "睡眠", color: "#6366f1" },
-  eating: { label: "饮食", color: "#f59e0b" },
-  exercise: { label: "运动", color: "#22c55e" },
+  water: { label: "Water", color: "#0ea5e9" },
+  sleep: { label: "Sleep", color: "#6366f1" },
+  eating: { label: "Eating", color: "#f59e0b" },
+  exercise: { label: "Exercise", color: "#22c55e" },
 }
 
 export function ReportView({ onProceedToCreative }: ReportViewProps) {
@@ -74,8 +74,8 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
   }, [assessmentAnswers, healthStatus, selectedClient, polishStyle])
 
   const generateComprehensiveReport = () => {
-    const clientName = selectedClient?.name || "客户"
-    const date = new Date().toLocaleDateString("zh-CN", {
+    const clientName = selectedClient?.name || "Client"
+    const date = new Date().toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -84,8 +84,8 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
     const reportId = `SV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}${String(Math.floor(Math.random() * 100)).padStart(2, "0")}`
     
     const totalHealth = healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise
-    const healthLevel = totalHealth >= 28 ? "状态良好" : totalHealth >= 20 ? "需持续关注" : "需要加强支持"
-    const riskLevel = totalHealth < 20 ? "高" : totalHealth < 28 ? "中" : "低"
+    const healthLevel = totalHealth >= 28 ? "Good Condition" : totalHealth >= 20 ? "Needs Monitoring" : "Needs Support"
+    const riskLevel = totalHealth < 20 ? "High" : totalHealth < 28 ? "Medium" : "Low"
 
     let report = ""
     
@@ -102,117 +102,117 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
 
   const generateProfessionalReport = (clientName: string, date: string, reportId: string, totalHealth: number, healthLevel: string, riskLevel: string) => {
     let report = `════════════════════════════════════════\n`
-    report += `        社会工作服务探访报告\n`
+    report += `        Social Work Service Visit Report\n`
     report += `════════════════════════════════════════\n\n`
 
-    report += `【报告编号】${reportId}\n`
-    report += `【报告日期】${date}\n`
-    report += `【编制单位】社会工作服务团队\n`
-    report += `【保密等级】内部使用\n\n`
+    report += `[Report ID] ${reportId}\n`
+    report += `[Report Date] ${date}\n`
+    report += `[Prepared By] Social Work Service Team\n`
+    report += `[Classification] Internal Use Only\n\n`
 
     report += `────────────────────────────────────────\n`
-    report += `一、基本信息\n`
+    report += `1. Basic Information\n`
     report += `────────────────────────────────────────\n\n`
-    report += `客户姓名：${clientName}\n`
-    report += `探访日期：${date}\n`
-    report += `探访地点：${selectedClient?.address || "未提供"}\n`
-    report += `联系电话：${selectedClient?.phone || "未提供"}\n`
-    report += `服务类别：居家照护探访\n`
-    report += `预计时长：约60分钟\n\n`
+    report += `Client Name: ${clientName}\n`
+    report += `Visit Date: ${date}\n`
+    report += `Visit Location: ${selectedClient?.address || "Not Provided"}\n`
+    report += `Contact Phone: ${selectedClient?.phone || "Not Provided"}\n`
+    report += `Service Type: Home Care Visit\n`
+    report += `Expected Duration: Approximately 60 minutes\n\n`
 
     report += `────────────────────────────────────────\n`
-    report += `二、健康状况评估\n`
+    report += `2. Health Status Assessment\n`
     report += `────────────────────────────────────────\n\n`
-    report += `根据本次探访期间的直接评估，客户当前健康状况记录如下：\n\n`
-    report += `【量化健康指标】\n`
-    report += `┌─────────────┬────────┬────────────────┐\n`
-    report += `│    指标     │ 评分   │     状态       │\n`
-    report += `├─────────────┼────────┼────────────────┤\n`
-    report += `│ 饮水摄入量  │ ${healthStatus.water}/10  │ ${healthStatus.water >= 7 ? "充足" : healthStatus.water >= 4 ? "需改善" : "不足-需关注"} │\n`
-    report += `│ 睡眠质量    │ ${healthStatus.sleep}/10  │ ${healthStatus.sleep >= 7 ? "良好" : healthStatus.sleep >= 4 ? "一般" : "较差-建议干预"} │\n`
-    report += `│ 饮食情况    │ ${healthStatus.eating}/10  │ ${healthStatus.eating >= 7 ? "食欲良好" : healthStatus.eating >= 4 ? "中等" : "食欲不佳-营养风险"} │\n`
-    report += `│ 运动情况    │ ${healthStatus.exercise}/10  │ ${healthStatus.exercise >= 7 ? "活跃" : healthStatus.exercise >= 4 ? "轻度活动" : "久坐-活动能力关注"} │\n`
-    report += `└─────────────┴────────┴────────────────┘\n\n`
-    report += `【综合评分】${totalHealth}/40 - ${healthLevel}\n`
-    report += `【风险等级】${riskLevel}风险\n\n`
+    report += `Based on direct assessment during this visit, the client's current health status is recorded as follows:\n\n`
+    report += `[Quantified Health Indicators]\n`
+    report += `┌─────────────────┬────────┬─────────────────────┐\n`
+    report += `│    Indicator    │ Score  │       Status        │\n`
+    report += `├─────────────────┼────────┼─────────────────────┤\n`
+    report += `│ Water Intake    │ ${healthStatus.water}/10  │ ${healthStatus.water >= 7 ? "Adequate" : healthStatus.water >= 4 ? "Needs Improvement" : "Insufficient - Attention"} │\n`
+    report += `│ Sleep Quality   │ ${healthStatus.sleep}/10  │ ${healthStatus.sleep >= 7 ? "Good" : healthStatus.sleep >= 4 ? "Fair" : "Poor - Intervention Advised"} │\n`
+    report += `│ Eating Habits   │ ${healthStatus.eating}/10  │ ${healthStatus.eating >= 7 ? "Good Appetite" : healthStatus.eating >= 4 ? "Moderate" : "Poor Appetite - Nutrition Risk"} │\n`
+    report += `│ Exercise Level  │ ${healthStatus.exercise}/10  │ ${healthStatus.exercise >= 7 ? "Active" : healthStatus.exercise >= 4 ? "Light Activity" : "Sedentary - Mobility Concern"} │\n`
+    report += `└─────────────────┴────────┴─────────────────────┘\n\n`
+    report += `[Overall Score] ${totalHealth}/40 - ${healthLevel}\n`
+    report += `[Risk Level] ${riskLevel} Risk\n\n`
 
     report += `────────────────────────────────────────\n`
-    report += `三、认知评估记录\n`
+    report += `3. Cognitive Assessment Records\n`
     report += `────────────────────────────────────────\n\n`
-    report += `本次探访期间按照认知照护方案进行了以下标准化评估活动：\n\n`
+    report += `The following standardized assessment activities were conducted during this visit according to the cognitive care plan:\n\n`
 
     if (assessmentAnswers.length > 0) {
       assessmentAnswers.forEach((answer, index) => {
-        const activityName = answer.question.split(":")[0]?.trim() || `活动 ${index + 1}`
-        report += `【${index + 1}. ${activityName}】\n`
-        report += `问题内容：${answer.question}\n`
-        report += `客户回应：${answer.answer || "未记录回应"}\n`
-        report += `完成状态：${answer.completionStatus || "待审核"}\n\n`
+        const activityName = answer.question.split(":")[0]?.trim() || `Activity ${index + 1}`
+        report += `[${index + 1}. ${activityName}]\n`
+        report += `Question: ${answer.question}\n`
+        report += `Client Response: ${answer.answer || "No response recorded"}\n`
+        report += `Completion Status: ${answer.completionStatus || "Pending Review"}\n\n`
       })
 
       const completed = assessmentAnswers.filter(a => a.completionStatus === "100% Complete").length
       const partial = assessmentAnswers.filter(a => a.completionStatus === "> 50% Complete").length
-      report += `【评估完成摘要】\n`
-      report += `共 ${assessmentAnswers.length} 项活动：${completed} 项完全完成，${partial} 项部分完成\n\n`
+      report += `[Assessment Summary]\n`
+      report += `Total ${assessmentAnswers.length} activities: ${completed} fully completed, ${partial} partially completed\n\n`
     } else {
-      report += `本次未进行标准化评估活动。\n\n`
+      report += `No standardized assessment activities were conducted during this visit.\n\n`
     }
 
     report += `────────────────────────────────────────\n`
-    report += `四、服务内容记录\n`
+    report += `4. Service Content Records\n`
     report += `────────────────────────────────────────\n\n`
-    report += `本次居家探访中，社工提供了以下专业服务：\n\n`
-    report += `1. 健康监测 - 全面生命体征检查、用药依从性审查、症状筛查\n`
-    report += `2. 认知活动促进 - 按照护理方案进行结构化认知刺激练习\n`
-    report += `3. 心理社会支持 - 积极倾听、情感支持和社交参与活动\n`
-    report += `4. 营养指导 - 饮食摄入审查、膳食准备支持和建议\n`
-    report += `5. 安全评估 - 居家环境安全检查和跌倒风险评估\n`
-    report += `6. 家属联络 - 为主要家属联系人准备进展更新\n\n`
+    report += `During this home visit, the social worker provided the following professional services:\n\n`
+    report += `1. Health Monitoring - Comprehensive vital signs check, medication adherence review, symptom screening\n`
+    report += `2. Cognitive Activity Facilitation - Structured cognitive stimulation exercises per care plan\n`
+    report += `3. Psychosocial Support - Active listening, emotional support, and social engagement activities\n`
+    report += `4. Nutritional Guidance - Dietary intake review, meal preparation support, and recommendations\n`
+    report += `5. Safety Assessment - Home environment safety check and fall risk evaluation\n`
+    report += `6. Family Liaison - Progress update prepared for primary family contact\n\n`
 
     report += `────────────────────────────────────────\n`
-    report += `五、专业建议与跟进计划\n`
+    report += `5. Professional Recommendations & Follow-up Plan\n`
     report += `────────────────────────────────────────\n\n`
-    report += `【短期措施（1周内）】\n`
-    report += `- ${healthStatus.water < 5 ? "安排每日饮水提醒系统或照护者支持" : "继续鼓励全天定期饮水"}\n`
-    report += `- ${healthStatus.sleep < 5 ? "转介全科医生进行睡眠评估和可能的干预" : "保持当前睡眠卫生习惯"}\n`
-    report += `- ${healthStatus.eating < 5 ? "咨询营养师；考虑加入送餐服务" : "下次探访时监测食欲"}\n`
-    report += `- 7天内安排跟进探访以监测进展\n\n`
+    report += `[Short-term Actions (Within 1 Week)]\n`
+    report += `- ${healthStatus.water < 5 ? "Arrange daily hydration reminder system or caregiver support" : "Continue encouraging regular water intake throughout the day"}\n`
+    report += `- ${healthStatus.sleep < 5 ? "Refer to GP for sleep assessment and possible intervention" : "Maintain current sleep hygiene practices"}\n`
+    report += `- ${healthStatus.eating < 5 ? "Consult nutritionist; consider meal delivery service enrollment" : "Monitor appetite at next visit"}\n`
+    report += `- Schedule follow-up visit within 7 days to monitor progress\n\n`
 
-    report += `【中期措施（1个月内）】\n`
-    report += `- 如指标未改善，增加探访频率至每周两次\n`
-    report += `- 联系${clientName}的主要家属联系人讨论照护安排\n`
-    report += `- 与社区医院协调建立或更新健康档案\n`
-    report += `- 根据本次评估审查和更新个性化照护计划\n\n`
+    report += `[Medium-term Actions (Within 1 Month)]\n`
+    report += `- Increase visit frequency to twice weekly if indicators do not improve\n`
+    report += `- Contact ${clientName}'s primary family contact to discuss care arrangements\n`
+    report += `- Coordinate with community hospital to establish or update health records\n`
+    report += `- Review and update personalized care plan based on this assessment\n\n`
 
     report += `════════════════════════════════════════\n`
-    report += `本报告保密，仅供授权人员使用。\n`
-    report += `请按照贵单位数据保护政策处理。\n`
+    report += `This report is confidential and for authorized personnel only.\n`
+    report += `Please handle according to your organization's data protection policy.\n`
     report += `════════════════════════════════════════\n`
 
     return report
   }
 
   const generateConciseReport = (clientName: string, date: string, reportId: string, totalHealth: number, healthLevel: string, riskLevel: string) => {
-    let report = `【探访简报】${reportId}\n`
+    let report = `[Visit Brief] ${reportId}\n`
     report += `━━━━━━━━━━━━━━━━━━━━\n\n`
     
-    report += `客户：${clientName}\n`
-    report += `日期：${date}\n`
-    report += `地点：${selectedClient?.address || "未提供"}\n\n`
+    report += `Client: ${clientName}\n`
+    report += `Date: ${date}\n`
+    report += `Location: ${selectedClient?.address || "Not Provided"}\n\n`
     
-    report += `【健康评分】${totalHealth}/40 (${healthLevel})\n`
-    report += `饮水：${healthStatus.water}/10 | 睡眠：${healthStatus.sleep}/10 | 饮食：${healthStatus.eating}/10 | 运动：${healthStatus.exercise}/10\n\n`
+    report += `[Health Score] ${totalHealth}/40 (${healthLevel})\n`
+    report += `Water: ${healthStatus.water}/10 | Sleep: ${healthStatus.sleep}/10 | Eating: ${healthStatus.eating}/10 | Exercise: ${healthStatus.exercise}/10\n\n`
     
-    report += `【评估摘要】\n`
+    report += `[Assessment Summary]\n`
     if (assessmentAnswers.length > 0) {
       assessmentAnswers.forEach((answer, index) => {
-        report += `${index + 1}. ${answer.completionStatus || "待定"}\n`
+        report += `${index + 1}. ${answer.completionStatus || "Pending"}\n`
       })
     } else {
-      report += `未进行评估活动\n`
+      report += `No assessment activities conducted\n`
     }
-    report += `\n【风险等级】${riskLevel}\n`
-    report += `【下次跟进】7天内\n`
+    report += `\n[Risk Level] ${riskLevel}\n`
+    report += `[Next Follow-up] Within 7 days\n`
 
     return report
   }
@@ -221,25 +221,25 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
     let report = generateProfessionalReport(clientName, date, reportId, totalHealth, healthLevel, riskLevel)
     
     report += `\n────────────────────────────────────────\n`
-    report += `六、详细观察记录\n`
+    report += `6. Detailed Observation Records\n`
     report += `────────────────────────────────────────\n\n`
     
-    report += `【环境观察】\n`
-    report += `居家环境整洁度：良好/一般/需关注\n`
-    report += `安全隐患：无明显隐患/已发现并记录\n`
-    report += `辅助设备状况：正常使用/需维护/需更新\n\n`
+    report += `[Environmental Observations]\n`
+    report += `Home Environment Cleanliness: Good / Fair / Needs Attention\n`
+    report += `Safety Hazards: None Identified / Found and Documented\n`
+    report += `Assistive Equipment Status: Normal Use / Needs Maintenance / Needs Update\n\n`
     
-    report += `【情绪状态】\n`
-    report += `客户在探访期间表现出${totalHealth >= 28 ? "积极配合、情绪稳定" : totalHealth >= 20 ? "基本配合、偶有情绪波动" : "需要更多情感支持"}的状态。\n`
-    report += `社交互动能力：${totalHealth >= 25 ? "良好" : "需加强"}\n\n`
+    report += `[Emotional State]\n`
+    report += `During the visit, the client exhibited ${totalHealth >= 28 ? "cooperative behavior and stable mood" : totalHealth >= 20 ? "general cooperation with occasional mood fluctuations" : "a need for additional emotional support"}.\n`
+    report += `Social Interaction Ability: ${totalHealth >= 25 ? "Good" : "Needs Strengthening"}\n\n`
     
-    report += `【家属沟通建议】\n`
-    report += `建议与家属讨论以下事项：\n`
-    if (healthStatus.water < 5) report += `- 增加日常饮水量监督\n`
-    if (healthStatus.sleep < 5) report += `- 关注睡眠问题，必要时就医\n`
-    if (healthStatus.eating < 5) report += `- 改善饮食结构，增加营养摄入\n`
-    if (healthStatus.exercise < 5) report += `- 增加适度运动，防止功能退化\n`
-    if (totalHealth >= 28) report += `- 保持当前良好状态，继续定期探访\n`
+    report += `[Family Communication Recommendations]\n`
+    report += `The following matters are recommended for discussion with family:\n`
+    if (healthStatus.water < 5) report += `- Increase daily water intake monitoring\n`
+    if (healthStatus.sleep < 5) report += `- Monitor sleep issues, seek medical attention if necessary\n`
+    if (healthStatus.eating < 5) report += `- Improve dietary structure, increase nutritional intake\n`
+    if (healthStatus.exercise < 5) report += `- Increase moderate exercise to prevent functional decline\n`
+    if (totalHealth >= 28) report += `- Maintain current good condition, continue regular visits\n`
 
     return report
   }
@@ -263,7 +263,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
   const handleDownload = () => {
     const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" })
     const link = document.createElement("a")
-    link.download = `工作报告-${selectedClient?.name || "客户"}-${new Date().toISOString().split("T")[0]}.txt`
+    link.download = `Work-Report-${selectedClient?.name || "Client"}-${new Date().toISOString().split("T")[0]}.txt`
     link.href = URL.createObjectURL(blob)
     link.click()
   }
@@ -275,9 +275,9 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
       printWindow.document.write(`
         <html>
           <head>
-            <title>工作报告 - ${selectedClient?.name || "客户"}</title>
+            <title>Work Report - ${selectedClient?.name || "Client"}</title>
             <style>
-              body { font-family: 'SimSun', serif; padding: 40px; line-height: 1.8; }
+              body { font-family: 'Georgia', serif; padding: 40px; line-height: 1.8; }
               pre { white-space: pre-wrap; word-wrap: break-word; }
             </style>
           </head>
@@ -299,28 +299,28 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
   }))
 
   const radialData = [{
-    name: "综合评分",
+    name: "Overall Score",
     value: ((healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise) / 40) * 100,
     fill: "url(#healthGradient)"
   }]
 
   const polishOptions = [
-    { id: "professional" as PolishStyle, icon: FileStack, label: "专业版", desc: "适用于正式报告和存档" },
-    { id: "concise" as PolishStyle, icon: Zap, label: "简洁版", desc: "突出重点，精简内容" },
-    { id: "detailed" as PolishStyle, icon: AlignLeft, label: "详细版", desc: "补充详情和背景信息" },
+    { id: "professional" as PolishStyle, icon: FileStack, label: "Professional", desc: "Suitable for formal reports and archiving" },
+    { id: "concise" as PolishStyle, icon: Zap, label: "Concise", desc: "Highlights key points, streamlined content" },
+    { id: "detailed" as PolishStyle, icon: AlignLeft, label: "Detailed", desc: "Supplements with details and background" },
   ]
 
   return (
     <div className="flex flex-col gap-4 pb-24 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen -mx-4 -mt-4 px-4 pt-4">
       {/* Success Banner */}
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-4 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-slate-400 to-slate-500 rounded-xl p-4 text-white shadow-lg">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
             <CheckCircle2 className="h-7 w-7" />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">工作报告已生成</h2>
-            <p className="text-sm text-white/90">基于评估数据自动生成的专业工作报告</p>
+            <h2 className="font-semibold text-lg">Work Report Generated</h2>
+            <p className="text-sm text-white/90">Professional work report auto-generated based on assessment data</p>
           </div>
         </div>
       </div>
@@ -333,21 +333,21 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
               <User className="h-7 w-7 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-lg">{selectedClient?.name || "未选择客户"}</h3>
+              <h3 className="font-semibold text-lg">{selectedClient?.name || "No Client Selected"}</h3>
               <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
-                  <span className="line-clamp-1">{selectedClient?.address || "未提供地址"}</span>
+                  <span className="line-clamp-1">{selectedClient?.address || "Address Not Provided"}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" />
-                  <span>{selectedClient?.phone || "未提供电话"}</span>
+                  <span>{selectedClient?.phone || "Phone Not Provided"}</span>
                 </div>
               </div>
             </div>
             <Badge variant="secondary" className="shrink-0">
               <Calendar className="h-3.5 w-3.5 mr-1" />
-              {new Date().toLocaleDateString("zh-CN")}
+              {new Date().toLocaleDateString("en-US")}
             </Badge>
           </div>
         </CardContent>
@@ -358,7 +358,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
             <Sparkles className="h-4 w-4 text-amber-500" />
-            客户健康状况（点击评分 0-10）
+            Client Health Status (Tap to Rate 0-10)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -408,7 +408,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
                   </RadialBarChart>
                 </ResponsiveContainer>
               </ChartContainer>
-              <p className="text-xs text-muted-foreground mt-1">综合健康评分</p>
+              <p className="text-xs text-muted-foreground mt-1">Overall Health Score</p>
             </div>
 
             {/* Bar Chart for Individual Metrics */}
@@ -418,7 +418,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
                   <BarChart data={healthChartData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" domain={[0, 10]} tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="name" type="category" width={40} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="name" type="category" width={50} tick={{ fontSize: 10 }} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {healthChartData.map((entry, index) => (
@@ -428,7 +428,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
-              <p className="text-xs text-muted-foreground mt-1 text-center">各项指标评分</p>
+              <p className="text-xs text-muted-foreground mt-1 text-center">Individual Metric Scores</p>
             </div>
           </div>
 
@@ -467,24 +467,24 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
               <FileText className="h-4 w-4 text-primary" />
-              评估问答记录
-              <Badge variant="secondary" className="ml-auto">{assessmentAnswers.length} 项</Badge>
+              Assessment Q&A Records
+              <Badge variant="secondary" className="ml-auto">{assessmentAnswers.length} Items</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-              {assessmentAnswers.map((answer, index) => (
+              {assessmentAnswers.map((answer) => (
                 <div key={answer.questionId} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="default" className="bg-primary text-xs">Q{answer.questionId}</Badge>
-                    <Badge variant={answer.completionStatus ? "default" : "outline"} className={cn("text-xs", answer.completionStatus && "bg-emerald-500")}>
-                      {answer.completionStatus || "待审核"}
+                    <Badge variant="default" className="bg-slate-400 text-xs">Q{answer.questionId}</Badge>
+                    <Badge variant={answer.completionStatus ? "default" : "outline"} className={cn("text-xs", answer.completionStatus && "bg-slate-500")}>
+                      {answer.completionStatus || "Pending Review"}
                     </Badge>
                   </div>
                   <p className="text-xs text-slate-600 mb-1 line-clamp-2">{answer.question}</p>
                   <p className="text-xs text-slate-800 bg-white rounded-lg p-2 border border-slate-100">
-                    <span className="font-medium text-primary">回应：</span>
-                    {answer.answer || "未记录"}
+                    <span className="font-medium text-primary">Response: </span>
+                    {answer.answer || "Not Recorded"}
                   </p>
                 </div>
               ))}
@@ -501,16 +501,16 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
             <CardTitle className="text-sm flex items-center justify-between">
               <span className="flex items-center gap-2 text-slate-700">
                 <FileText className="h-4 w-4" />
-                工作报告预览
+                Work Report Preview
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
                   <ClipboardCopy className="h-3.5 w-3.5" />
-                  {copied ? "已复制！" : "复制"}
+                  {copied ? "Copied!" : "Copy"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
                   <Download className="h-3.5 w-3.5" />
-                  下载
+                  Download
                 </Button>
               </div>
             </CardTitle>
@@ -532,10 +532,10 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
           <CardHeader className="pb-3 border-b border-slate-100">
             <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
               <Sparkles className="h-4 w-4 text-amber-500" />
-              AI 润色
+              AI Polish
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              选择风格，AI 将优化报告的表达和格式
+              Select a style and AI will optimize the report format and expression
             </p>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
@@ -566,7 +566,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
                           {option.label}
                         </span>
                         {isSelected && (
-                          <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">已应用</Badge>
+                          <Badge variant="secondary" className="text-xs bg-slate-200 text-slate-600">Applied</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{option.desc}</p>
@@ -578,25 +578,25 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
 
             <Button 
               onClick={handleAIPolish} 
-              className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600 mt-4"
+              className="w-full gap-2 bg-slate-500 hover:bg-slate-600 mt-4"
               disabled={isPolishing}
             >
               <Sparkles className={cn("h-4 w-4", isPolishing && "animate-spin")} />
-              {isPolishing ? "润色中..." : "重新生成"}
+              {isPolishing ? "Polishing..." : "Regenerate"}
             </Button>
 
-            <Button variant="outline" onClick={handleExportPDF} className="w-full gap-2">
+            <Button variant="outline" onClick={handleExportPDF} className="w-full gap-2 border-slate-300 text-slate-600 hover:bg-slate-100">
               <Download className="h-4 w-4" />
-              导出打印
+              Export to Print
             </Button>
 
             {/* Tips */}
             <div className="pt-4 border-t border-slate-100">
-              <p className="text-xs font-medium text-slate-600 mb-2">提示</p>
+              <p className="text-xs font-medium text-slate-600 mb-2">Tips</p>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>报告基于评估数据自动生成</li>
-                <li>支持多种风格切换</li>
-                <li>可直接复制或下载保存</li>
+                <li>Report auto-generated from assessment data</li>
+                <li>Multiple style options available</li>
+                <li>Copy or download directly</li>
               </ul>
             </div>
           </CardContent>
@@ -605,12 +605,12 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        <Button variant="outline" onClick={handleDownload} className="flex-1 gap-2">
+        <Button variant="outline" onClick={handleDownload} className="flex-1 gap-2 border-slate-300 text-slate-600 hover:bg-slate-100">
           <Download className="h-4 w-4" />
-          下载报告
+          Download Report
         </Button>
-        <Button onClick={onProceedToCreative} className="flex-1 gap-2 bg-gradient-to-r from-slate-600 via-blue-600 to-indigo-600 hover:from-slate-700 hover:via-blue-700 hover:to-indigo-700">
-          创意报告
+        <Button onClick={onProceedToCreative} className="flex-1 gap-2 bg-slate-500 hover:bg-slate-600">
+          Creative Report
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
