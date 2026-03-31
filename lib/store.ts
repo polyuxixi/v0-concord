@@ -69,6 +69,9 @@ interface AppState {
   unlockedBadges: string[]
   unlockBadge: (badgeId: string) => void
   
+  completedReports: number
+  incrementCompletedReports: () => void
+  
   generatedReport: string
   setGeneratedReport: (report: string) => void
 }
@@ -109,11 +112,12 @@ const defaultClients: Client[] = [
 ]
 
 const defaultBadges: Badge[] = [
-  { id: "1", name: "First Steps", description: "Complete your first attendance", icon: "star", requiredAttendance: 1 },
-  { id: "2", name: "Dedicated Helper", description: "Complete 5 attendances", icon: "heart", requiredAttendance: 5 },
-  { id: "3", name: "Community Champion", description: "Complete 10 attendances", icon: "trophy", requiredAttendance: 10 },
-  { id: "4", name: "Service Star", description: "Complete 25 attendances", icon: "award", requiredAttendance: 25 },
-  { id: "5", name: "Golden Heart", description: "Complete 50 attendances", icon: "medal", requiredAttendance: 50 },
+  { id: "1", name: "First Steps", description: "Complete your first report", icon: "footprints", requiredAttendance: 1 },
+  { id: "2", name: "Dedicated Helper", description: "Complete 3 reports", icon: "heart", requiredAttendance: 3 },
+  { id: "3", name: "Community Champion", description: "Complete 5 reports", icon: "trophy", requiredAttendance: 5 },
+  { id: "4", name: "Service Star", description: "Complete 10 reports", icon: "star", requiredAttendance: 10 },
+  { id: "5", name: "Golden Heart", description: "Complete 15 reports", icon: "medal", requiredAttendance: 15 },
+  { id: "6", name: "Perfect Attendance", description: "Complete 20 reports", icon: "award", requiredAttendance: 20 },
 ]
 
 export const useAppStore = create<AppState>((set) => ({
@@ -153,6 +157,11 @@ export const useAppStore = create<AppState>((set) => ({
     unlockedBadges: state.unlockedBadges.includes(badgeId) 
       ? state.unlockedBadges 
       : [...state.unlockedBadges, badgeId]
+  })),
+  
+  completedReports: 0,
+  incrementCompletedReports: () => set((state) => ({
+    completedReports: state.completedReports + 1
   })),
   
   generatedReport: "",
