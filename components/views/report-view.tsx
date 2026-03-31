@@ -57,7 +57,9 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
     selectedClient, 
     assessmentAnswers, 
     healthStatus, 
-    setGeneratedReport
+    setGeneratedReport,
+    serviceDate,
+    serviceDateEnabled
   } = useAppStore()
 
   const [reportText, setReportText] = useState("")
@@ -71,7 +73,7 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
     const generatedText = generateComprehensiveReport()
     setReportText(generatedText)
     setGeneratedReport(generatedText)
-  }, [assessmentAnswers, healthStatus, selectedClient, polishStyle])
+  }, [assessmentAnswers, healthStatus, selectedClient, polishStyle, serviceDate, serviceDateEnabled])
 
   const generateComprehensiveReport = () => {
     const clientName = selectedClient?.name || "Client"
@@ -101,12 +103,22 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
   }
 
   const generateProfessionalReport = (clientName: string, date: string, reportId: string, totalHealth: number, healthLevel: string, riskLevel: string) => {
+    const formattedServiceDate = serviceDateEnabled ? new Date(serviceDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric", 
+      month: "long",
+      day: "numeric"
+    }) : null
+
     let report = `════════════════════════════════════════\n`
     report += `        Social Work Service Visit Report\n`
     report += `════════════════════════════════════════\n\n`
 
     report += `[Report ID] ${reportId}\n`
     report += `[Report Date] ${date}\n`
+    if (formattedServiceDate) {
+      report += `[Service Date] ${formattedServiceDate}\n`
+    }
     report += `[Prepared By] Social Work Service Team\n`
     report += `[Classification] Internal Use Only\n\n`
 
@@ -114,6 +126,9 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
     report += `1. Basic Information\n`
     report += `────────────────────────────────────────\n\n`
     report += `Client Name: ${clientName}\n`
+    if (formattedServiceDate) {
+      report += `Service Date: ${formattedServiceDate}\n`
+    }
     report += `Visit Date: ${date}\n`
     report += `Visit Location: ${selectedClient?.address || "Not Provided"}\n`
     report += `Contact Phone: ${selectedClient?.phone || "Not Provided"}\n`
@@ -193,10 +208,20 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
   }
 
   const generateConciseReport = (clientName: string, date: string, reportId: string, totalHealth: number, healthLevel: string, riskLevel: string) => {
+    const formattedServiceDate = serviceDateEnabled ? new Date(serviceDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric", 
+      month: "long",
+      day: "numeric"
+    }) : null
+
     let report = `[Visit Brief] ${reportId}\n`
     report += `━━━━━━━━━━━━━━━━━━━━\n\n`
     
     report += `Client: ${clientName}\n`
+    if (formattedServiceDate) {
+      report += `Service Date: ${formattedServiceDate}\n`
+    }
     report += `Date: ${date}\n`
     report += `Location: ${selectedClient?.address || "Not Provided"}\n\n`
     

@@ -57,6 +57,11 @@ interface AppState {
   setHealthStatus: (status: HealthStatus) => void
   updateHealthMetric: (metric: keyof HealthStatus, value: number) => void
   
+  serviceDate: string
+  setServiceDate: (date: string) => void
+  serviceDateEnabled: boolean
+  setServiceDateEnabled: (enabled: boolean) => void
+  
   attendanceRecords: AttendanceRecord[]
   addAttendanceRecord: (record: AttendanceRecord) => void
   
@@ -131,6 +136,11 @@ export const useAppStore = create<AppState>((set) => ({
   updateHealthMetric: (metric, value) => set((state) => ({
     healthStatus: { ...state.healthStatus, [metric]: Math.min(10, Math.max(0, value)) }
   })),
+  
+  serviceDate: new Date().toISOString().split('T')[0],
+  setServiceDate: (date) => set({ serviceDate: date }),
+  serviceDateEnabled: false,
+  setServiceDateEnabled: (enabled) => set({ serviceDateEnabled: enabled }),
   
   attendanceRecords: [],
   addAttendanceRecord: (record) => set((state) => ({
