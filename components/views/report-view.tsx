@@ -493,52 +493,68 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
         </Card>
       )}
 
-      {/* Report Document */}
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Report Preview */}
-        <Card className="md:col-span-2 bg-white shadow-sm border-slate-200">
-          <CardHeader className="pb-3 border-b border-slate-100">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2 text-slate-700">
-                <FileText className="h-4 w-4" />
-                Work Report Preview
-              </span>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
-                  <ClipboardCopy className="h-3.5 w-3.5" />
-                  {copied ? "Copied!" : "Copy"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
-                  <Download className="h-3.5 w-3.5" />
-                  Download
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div 
-              ref={reportRef}
-              className="prose prose-sm prose-slate max-w-none bg-slate-50 rounded-lg p-4 border border-slate-100 max-h-[400px] overflow-y-auto"
-            >
-              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-700">
-                {reportText}
-              </pre>
+      {/* Report Preview - Full Width */}
+      <Card className="bg-white shadow-sm border-slate-200">
+        <CardHeader className="pb-3 border-b border-slate-100">
+          <CardTitle className="text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="flex items-center gap-2 text-slate-700">
+              <FileText className="h-4 w-4" />
+              Work Report Preview
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
+                <ClipboardCopy className="h-3.5 w-3.5" />
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5 border-slate-300 text-slate-600 hover:bg-slate-100">
+                <Download className="h-3.5 w-3.5" />
+                Print
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div 
+            ref={reportRef}
+            className="prose prose-sm prose-slate max-w-none bg-slate-50 rounded-lg p-4 border border-slate-100 min-h-[300px] max-h-[500px] overflow-y-auto"
+          >
+            <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-700">
+              {reportText}
+            </pre>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* AI Polish Panel */}
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="pb-3 border-b border-slate-100">
-            <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              AI Polish
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Select a style and AI will optimize the report format and expression
-            </p>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3">
+      {/* AI Polish Panel - Below Report */}
+      <Card className="bg-white shadow-sm border-slate-200">
+        <CardHeader className="pb-3 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-sm flex items-center gap-2 text-slate-700">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                AI Polish
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Select a style to optimize the report format and expression
+              </p>
+            </div>
+            <Button 
+              onClick={handleAIPolish} 
+              className="gap-2 bg-slate-500 hover:bg-slate-600 shrink-0"
+              disabled={isPolishing}
+              size="sm"
+            >
+              <Sparkles className={cn("h-4 w-4", isPolishing && "animate-spin")} />
+              {isPolishing ? "Polishing..." : "Regenerate"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {polishOptions.map((option) => {
               const Icon = option.icon
               const isSelected = polishStyle === option.id
@@ -547,61 +563,37 @@ export function ReportView({ onProceedToCreative }: ReportViewProps) {
                   key={option.id}
                   onClick={() => setPolishStyle(option.id)}
                   className={cn(
-                    "w-full p-3 rounded-xl border-2 text-left transition-all",
+                    "p-3 rounded-xl border-2 text-left transition-all",
                     isSelected 
-                      ? "border-primary bg-primary/5" 
+                      ? "border-slate-400 bg-slate-50" 
                       : "border-slate-100 hover:border-slate-200 bg-slate-50/50"
                   )}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "h-9 w-9 rounded-lg flex items-center justify-center",
-                      isSelected ? "bg-primary/10" : "bg-slate-100"
+                      "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+                      isSelected ? "bg-slate-200" : "bg-slate-100"
                     )}>
-                      <Icon className={cn("h-5 w-5", isSelected ? "text-primary" : "text-slate-500")} />
+                      <Icon className={cn("h-5 w-5", isSelected ? "text-slate-700" : "text-slate-500")} />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={cn("font-medium text-sm", isSelected ? "text-primary" : "text-slate-700")}>
+                        <span className={cn("font-medium text-sm", isSelected ? "text-slate-700" : "text-slate-600")}>
                           {option.label}
                         </span>
                         {isSelected && (
-                          <Badge variant="secondary" className="text-xs bg-slate-200 text-slate-600">Applied</Badge>
+                          <Badge variant="secondary" className="text-xs bg-slate-200 text-slate-600">Active</Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{option.desc}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{option.desc}</p>
                     </div>
                   </div>
                 </button>
               )
             })}
-
-            <Button 
-              onClick={handleAIPolish} 
-              className="w-full gap-2 bg-slate-500 hover:bg-slate-600 mt-4"
-              disabled={isPolishing}
-            >
-              <Sparkles className={cn("h-4 w-4", isPolishing && "animate-spin")} />
-              {isPolishing ? "Polishing..." : "Regenerate"}
-            </Button>
-
-            <Button variant="outline" onClick={handleExportPDF} className="w-full gap-2 border-slate-300 text-slate-600 hover:bg-slate-100">
-              <Download className="h-4 w-4" />
-              Export to Print
-            </Button>
-
-            {/* Tips */}
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-xs font-medium text-slate-600 mb-2">Tips</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>Report auto-generated from assessment data</li>
-                <li>Multiple style options available</li>
-                <li>Copy or download directly</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Action Buttons */}
       <div className="flex gap-3">
