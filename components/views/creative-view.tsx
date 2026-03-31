@@ -17,7 +17,10 @@ import {
   Users,
   Camera,
   Pencil,
-  StickyNote
+  StickyNote,
+  ImagePlus,
+  X,
+  Move
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -57,7 +60,16 @@ interface PlacedSticker {
   y: number
 }
 
-type ToolMode = "draw" | "sticker"
+interface UploadedImage {
+  id: string
+  src: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+type ToolMode = "draw" | "sticker" | "image"
 
 export function CreativeView() {
   const { selectedClient, healthStatus } = useAppStore()
@@ -70,6 +82,10 @@ export function CreativeView() {
   const [selectedSticker, setSelectedSticker] = useState<string | null>(null)
   const [toolMode, setToolMode] = useState<ToolMode>("draw")
   const [creativeText, setCreativeText] = useState("")
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [draggingImage, setDraggingImage] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Generate creative text report
   useEffect(() => {
@@ -222,28 +238,172 @@ Your Social Worker`
     })
     
     setPlacedStickers([])
+    setUploadedImages([])
   }
 
-  const handleExport = () => {
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const src = event.target?.result as string
+        if (!src) return
+
+        // Create image to get dimensions
+        const img = new window.Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+          // Scale image to fit nicely (max 150px width)
+          const maxWidth = 150
+          const scale = Math.min(1, maxWidth / img.width)
+          const width = img.width * scale
+          const height = img.height * scale
+
+          setUploadedImages(prev => [...prev, {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            src,
+            x: 20,
+            y: 20,
+            width,
+            height
+          }])
+        }
+        img.src = src
+      }
+      reader.readAsDataURL(file)
+    })
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // Handle image drag start
+  const handleImageDragStart = (e: React.MouseEvent | React.TouchEvent, imageId: string) => {
+    e.stopPropagation()
+    const image = uploadedImages.find(img => img.id === imageId)
+    if (!image) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+
+    setDraggingImage(imageId)
+    setDragOffset({
+      x: clientX - rect.left - image.x,
+      y: clientY - rect.top - image.y
+    })
+  }
+
+  // Handle image drag move
+  const handleImageDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!draggingImage) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+
+    const newX = Math.max(0, Math.min(rect.width - 50, clientX - rect.left - dragOffset.x))
+    const newY = Math.max(0, Math.min(600 - 50, clientY - rect.top - dragOffset.y))
+
+    setUploadedImages(prev => prev.map(img => 
+      img.id === draggingImage ? { ...img, x: newX, y: newY } : img
+    ))
+  }
+
+  // Handle image drag end
+  const handleImageDragEnd = () => {
+    setDraggingImage(null)
+  }
+
+  // Remove image
+  const removeImage = (imageId: string) => {
+    setUploadedImages(prev => prev.filter(img => img.id !== imageId))
+  }
+
+  const handleExport = async () => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Draw stickers onto canvas before export
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+
     // Create a temporary canvas for export
     const exportCanvas = document.createElement("canvas")
-    exportCanvas.width = canvas.width
-    exportCanvas.height = canvas.height
+    exportCanvas.width = rect.width * 2
+    exportCanvas.height = 600 * 2
     const exportCtx = exportCanvas.getContext("2d")
     if (!exportCtx) return
 
-    // Copy current canvas
-    exportCtx.drawImage(canvas, 0, 0)
+    exportCtx.scale(2, 2)
 
-    // Note: Stickers are rendered as DOM elements, so we export the canvas with drawings only
-    // For full export with stickers, we would need to render them to canvas first
+    // Copy current canvas (includes drawings and text)
+    exportCtx.drawImage(canvas, 0, 0, rect.width, 600)
+
+    // Draw uploaded images
+    const imagePromises = uploadedImages.map(img => {
+      return new Promise<void>((resolve) => {
+        const image = new window.Image()
+        image.crossOrigin = "anonymous"
+        image.onload = () => {
+          exportCtx.drawImage(image, img.x, img.y, img.width, img.height)
+          resolve()
+        }
+        image.onerror = () => resolve()
+        image.src = img.src
+      })
+    })
+
+    await Promise.all(imagePromises)
+
+    // Draw stickers as colored circles with icons representation
+    placedStickers.forEach((placed) => {
+      const sticker = stickers.find(s => s.id === placed.stickerId)
+      if (!sticker) return
+      
+      // Draw a colored circle to represent the sticker
+      exportCtx.beginPath()
+      exportCtx.arc(placed.x, placed.y, 16, 0, Math.PI * 2)
+      
+      // Get color from class
+      const colorMap: Record<string, string> = {
+        "text-rose-500": "#f43f5e",
+        "text-amber-500": "#f59e0b",
+        "text-yellow-500": "#eab308",
+        "text-emerald-500": "#22c55e",
+        "text-blue-500": "#3b82f6",
+        "text-purple-500": "#a855f7",
+        "text-pink-500": "#ec4899",
+        "text-orange-500": "#f97316",
+        "text-teal-500": "#14b8a6",
+        "text-indigo-500": "#6366f1"
+      }
+      exportCtx.fillStyle = colorMap[sticker.color] || "#3b82f6"
+      exportCtx.fill()
+      
+      // Draw label
+      exportCtx.fillStyle = "#ffffff"
+      exportCtx.font = "10px sans-serif"
+      exportCtx.textAlign = "center"
+      exportCtx.fillText(sticker.label.charAt(0), placed.x, placed.y + 4)
+    })
     
     const link = document.createElement("a")
     link.download = `creative-report-${selectedClient?.name || "client"}-${new Date().toISOString().split("T")[0]}.png`
@@ -287,6 +447,17 @@ Your Social Worker`
         >
           <StickyNote className="h-4 w-4" />
           Stickers
+        </Button>
+        <Button
+          variant={toolMode === "image" ? "default" : "outline"}
+          onClick={() => setToolMode("image")}
+          className={cn(
+            "flex-1 gap-2",
+            toolMode === "image" ? "bg-slate-500 hover:bg-slate-600" : "border-slate-300 text-slate-600"
+          )}
+        >
+          <ImagePlus className="h-4 w-4" />
+          Images
         </Button>
       </div>
 
@@ -374,6 +545,60 @@ Your Social Worker`
         </Card>
       )}
 
+      {/* Image Upload - Show when in image mode */}
+      {toolMode === "image" && (
+        <Card className="border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-slate-700">Upload Images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors"
+            >
+              <ImagePlus className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+              <p className="text-sm text-slate-600">Click to upload images</p>
+              <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF supported</p>
+            </div>
+            
+            {/* Uploaded Images Preview */}
+            {uploadedImages.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-slate-600 mb-2 flex items-center gap-1">
+                  <Move className="h-3 w-3" />
+                  Drag images on the report to reposition
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {uploadedImages.map((img) => (
+                    <div key={img.id} className="relative group">
+                      <img 
+                        src={img.src} 
+                        alt="Uploaded"
+                        className="w-full h-16 object-cover rounded-lg border border-slate-200"
+                      />
+                      <button
+                        onClick={() => removeImage(img.id)}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Unified Canvas with Text Report */}
       <Card className="overflow-hidden border-slate-200">
         <CardHeader className="pb-2 border-b border-slate-100">
@@ -381,11 +606,19 @@ Your Social Worker`
             <span>Report Canvas</span>
             <Button variant="outline" size="sm" onClick={clearCanvas} className="gap-1.5 border-slate-300 text-slate-600">
               <Trash2 className="h-3.5 w-3.5" />
-              Clear Drawings
+              Clear All
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0 relative" ref={containerRef}>
+        <CardContent 
+          className="p-0 relative" 
+          ref={containerRef}
+          onMouseMove={handleImageDragMove}
+          onMouseUp={handleImageDragEnd}
+          onMouseLeave={handleImageDragEnd}
+          onTouchMove={handleImageDragMove}
+          onTouchEnd={handleImageDragEnd}
+        >
           <canvas
             ref={canvasRef}
             className="w-full touch-none bg-white"
@@ -398,6 +631,40 @@ Your Social Worker`
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
           />
+          
+          {/* Placed Images - Draggable */}
+          {uploadedImages.map((img) => (
+            <div
+              key={img.id}
+              className={cn(
+                "absolute cursor-move group",
+                draggingImage === img.id && "opacity-75 z-50"
+              )}
+              style={{ 
+                left: img.x, 
+                top: img.y, 
+                width: img.width, 
+                height: img.height 
+              }}
+              onMouseDown={(e) => handleImageDragStart(e, img.id)}
+              onTouchStart={(e) => handleImageDragStart(e, img.id)}
+            >
+              <img 
+                src={img.src} 
+                alt="Uploaded"
+                className="w-full h-full object-cover rounded-lg shadow-md border-2 border-white"
+                draggable={false}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
+                className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <div className="absolute inset-0 border-2 border-slate-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            </div>
+          ))}
+
           {/* Placed Stickers */}
           {placedStickers.map((placed) => {
             const sticker = stickers.find(s => s.id === placed.stickerId)
