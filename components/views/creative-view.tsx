@@ -72,7 +72,7 @@ interface UploadedImage {
 type ToolMode = "draw" | "sticker" | "image"
 
 export function CreativeView() {
-  const { selectedClient, healthStatus } = useAppStore()
+  const { selectedClient, healthStatus, assessmentAnswers, serviceDate, serviceDateEnabled } = useAppStore()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -85,63 +85,139 @@ export function CreativeView() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [draggingImage, setDraggingImage] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [canvasReady, setCanvasReady] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Generate creative text report
+  // Generate creative text report with all historical data
   useEffect(() => {
-    if (selectedClient) {
-      const text = `Dear Family of ${selectedClient.name},
+    const clientName = selectedClient?.name || "Client"
+    const totalHealth = healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise
+    const healthLevel = totalHealth >= 28 ? "Excellent" : totalHealth >= 20 ? "Good" : totalHealth >= 10 ? "Fair" : "Needs Attention"
+    
+    // Format service date if enabled
+    const formattedServiceDate = serviceDateEnabled ? new Date(serviceDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric", 
+      month: "long",
+      day: "numeric"
+    }) : new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 
-Today's visit was wonderful! Here's a summary of our time together:
+    // Build special items based on health status
+    const specialItems: string[] = []
+    if (healthStatus.water < 5) specialItems.push("Needs more hydration support")
+    if (healthStatus.sleep < 5) specialItems.push("Sleep quality needs monitoring")
+    if (healthStatus.eating < 5) specialItems.push("Nutritional support recommended")
+    if (healthStatus.exercise < 5) specialItems.push("Encourage light physical activity")
+    if (totalHealth >= 28) specialItems.push("Overall excellent condition!")
+    
+    let text = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FAMILY UPDATE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Health Check:
-- Water Intake: ${healthStatus.water}/10
-- Sleep Quality: ${healthStatus.sleep}/10
-- Eating Status: ${healthStatus.eating}/10
-- Exercise Level: ${healthStatus.exercise}/10
+Dear Family of ${clientName},
 
-We had a great cognitive assessment session. ${selectedClient.name} was engaged and responsive throughout.
+Date: ${formattedServiceDate}
+
+Today's visit was wonderful! Here's a summary:
+
+── HEALTH STATUS ──────────────
+Water Intake:    ${"★".repeat(healthStatus.water)}${"☆".repeat(10 - healthStatus.water)} (${healthStatus.water}/10)
+Sleep Quality:   ${"★".repeat(healthStatus.sleep)}${"☆".repeat(10 - healthStatus.sleep)} (${healthStatus.sleep}/10)
+Eating Habits:   ${"★".repeat(healthStatus.eating)}${"☆".repeat(10 - healthStatus.eating)} (${healthStatus.eating}/10)
+Exercise Level:  ${"★".repeat(healthStatus.exercise)}${"☆".repeat(10 - healthStatus.exercise)} (${healthStatus.exercise}/10)
+
+Overall Status: ${healthLevel} (${totalHealth}/40)
+`
+
+    // Add special items section
+    if (specialItems.length > 0) {
+      text += `
+── SPECIAL NOTES ──────────────
+`
+      specialItems.forEach(item => {
+        text += `• ${item}\n`
+      })
+    }
+
+    // Add assessment summary if available
+    if (assessmentAnswers.length > 0) {
+      text += `
+── ACTIVITIES COMPLETED ───────
+`
+      assessmentAnswers.forEach((answer, index) => {
+        const status = answer.completionStatus === "100% Complete" ? "✓" : "○"
+        text += `${status} Activity ${index + 1}: ${answer.completionStatus || "In Progress"}\n`
+      })
+      
+      const completed = assessmentAnswers.filter(a => a.completionStatus === "100% Complete").length
+      text += `\nCompleted: ${completed}/${assessmentAnswers.length} activities\n`
+    }
+
+    text += `
+── MESSAGE ────────────────────
+${clientName} was engaged and responsive
+throughout the visit. We enjoyed our
+time together!
 
 With warm regards,
-Your Social Worker`
-      setCreativeText(text)
-    }
-  }, [selectedClient, healthStatus])
+Your Care Team
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    setCreativeText(text)
+  }, [selectedClient, healthStatus, assessmentAnswers, serviceDate, serviceDateEnabled])
 
   // Initialize canvas with text report as background
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const initializeCanvas = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return false
+      
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return false
 
-    const container = containerRef.current
-    if (!container) return
+      const container = containerRef.current
+      if (!container) return false
 
-    // Set canvas size based on container
-    const rect = container.getBoundingClientRect()
-    canvas.width = rect.width * 2
-    canvas.height = 600 * 2
-    ctx.scale(2, 2)
-    
-    // Fill with white background
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, rect.width, 600)
-    
-    // Draw text report on canvas
-    ctx.fillStyle = "#1e293b"
-    ctx.font = "14px 'Georgia', serif"
-    
-    const lines = creativeText.split("\n")
-    let y = 30
-    const lineHeight = 22
-    const padding = 20
-    
-    lines.forEach((line) => {
-      ctx.fillText(line, padding, y)
-      y += lineHeight
-    })
+      // Get container dimensions
+      const rect = container.getBoundingClientRect()
+      if (rect.width === 0) return false // Container not ready
+
+      // Set canvas size based on container
+      canvas.width = rect.width * 2
+      canvas.height = 600 * 2
+      ctx.scale(2, 2)
+      
+      // Fill with white background
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, rect.width, 600)
+      
+      // Draw text report on canvas
+      ctx.fillStyle = "#1e293b"
+      ctx.font = "13px 'Courier New', monospace"
+      
+      const lines = creativeText.split("\n")
+      let y = 24
+      const lineHeight = 18
+      const padding = 16
+      
+      lines.forEach((line) => {
+        ctx.fillText(line, padding, y)
+        y += lineHeight
+      })
+
+      setCanvasReady(true)
+      return true
+    }
+
+    // Try initializing immediately
+    if (!initializeCanvas()) {
+      // If failed, retry after a short delay (for container to render)
+      const timeout = setTimeout(() => {
+        initializeCanvas()
+      }, 100)
+      return () => clearTimeout(timeout)
+    }
   }, [creativeText])
 
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -225,12 +301,12 @@ Your Social Worker`
     
     // Redraw text report
     ctx.fillStyle = "#1e293b"
-    ctx.font = "14px 'Georgia', serif"
+    ctx.font = "13px 'Courier New', monospace"
     
     const lines = creativeText.split("\n")
-    let y = 30
-    const lineHeight = 22
-    const padding = 20
+    let y = 24
+    const lineHeight = 18
+    const padding = 16
     
     lines.forEach((line) => {
       ctx.fillText(line, padding, y)
