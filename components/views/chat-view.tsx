@@ -11,15 +11,17 @@ import {
   Utensils,
   Dumbbell,
   FileText,
-  MessageSquare,
   Bot,
   User,
-  Download
+  Download,
+  CalendarDays
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import { useAppStore, Client, AssessmentAnswer } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
@@ -83,7 +85,11 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
   const { 
     setAssessmentAnswers, 
     healthStatus, 
-    updateHealthMetric 
+    updateHealthMetric,
+    serviceDate,
+    setServiceDate,
+    serviceDateEnabled,
+    setServiceDateEnabled
   } = useAppStore()
 
   // Process the current transcription and move to next question
@@ -442,6 +448,49 @@ export function ChatView({ client, onBack, onExportReports }: ChatViewProps) {
             )
           })}
         </div>
+      </div>
+
+      {/* Service Date Field */}
+      <div className="py-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox 
+              id="serviceDateCheckbox"
+              checked={serviceDateEnabled}
+              onCheckedChange={(checked) => setServiceDateEnabled(checked === true)}
+              className="border-slate-400 data-[state=checked]:bg-slate-500 data-[state=checked]:border-slate-500"
+            />
+            <label 
+              htmlFor="serviceDateCheckbox" 
+              className="text-xs text-muted-foreground cursor-pointer"
+            >
+              Include Service Date in Report
+            </label>
+          </div>
+          <div className="flex items-center gap-2 flex-1">
+            <CalendarDays className="h-4 w-4 text-slate-500" />
+            <Input
+              type="date"
+              value={serviceDate}
+              onChange={(e) => setServiceDate(e.target.value)}
+              className={cn(
+                "h-8 text-xs border-slate-300 bg-slate-50 focus:border-slate-400 focus:ring-slate-400/20",
+                !serviceDateEnabled && "opacity-50"
+              )}
+              disabled={!serviceDateEnabled}
+            />
+          </div>
+        </div>
+        {serviceDateEnabled && (
+          <p className="text-xs text-slate-500 mt-2 pl-6">
+            Service Date: {new Date(serviceDate).toLocaleDateString("en-US", { 
+              weekday: "long", 
+              year: "numeric", 
+              month: "long", 
+              day: "numeric" 
+            })}
+          </p>
+        )}
       </div>
 
       {/* Chat Area */}

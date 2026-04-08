@@ -5,9 +5,7 @@ import {
   Palette, 
   Eraser, 
   Download, 
-  Undo, 
   Trash2,
-  Type,
   Heart,
   Star,
   Sun,
@@ -17,12 +15,15 @@ import {
   Flower2,
   Home,
   Users,
-  Camera
+  Camera,
+  Pencil,
+  StickyNote,
+  ImagePlus,
+  X,
+  Move
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { useAppStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -59,92 +60,208 @@ interface PlacedSticker {
   y: number
 }
 
+interface UploadedImage {
+  id: string
+  src: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+type ToolMode = "draw" | "sticker" | "image"
+
 export function CreativeView() {
-  const { selectedClient, generatedReport, healthStatus } = useAppStore()
+  const { selectedClient, healthStatus, assessmentAnswers, serviceDate, serviceDateEnabled } = useAppStore()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushColor, setBrushColor] = useState("#3b82f6")
   const [brushSize, setBrushSize] = useState([4])
   const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([])
   const [selectedSticker, setSelectedSticker] = useState<string | null>(null)
+  const [toolMode, setToolMode] = useState<ToolMode>("draw")
   const [creativeText, setCreativeText] = useState("")
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [draggingImage, setDraggingImage] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [canvasReady, setCanvasReady] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Generate creative text report with all historical data
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const clientName = selectedClient?.name || "Client"
+    const totalHealth = healthStatus.water + healthStatus.sleep + healthStatus.eating + healthStatus.exercise
+    const healthLevel = totalHealth >= 28 ? "Excellent" : totalHealth >= 20 ? "Good" : totalHealth >= 10 ? "Fair" : "Needs Attention"
     
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    // Format service date if enabled
+    const formattedServiceDate = serviceDateEnabled ? new Date(serviceDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric", 
+      month: "long",
+      day: "numeric"
+    }) : new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 
-    // Set canvas size
-    const rect = canvas.getBoundingClientRect()
-    canvas.width = rect.width * 2
-    canvas.height = rect.height * 2
-    ctx.scale(2, 2)
+    // Build special items based on health status
+    const specialItems: string[] = []
+    if (healthStatus.water < 5) specialItems.push("Needs more hydration support")
+    if (healthStatus.sleep < 5) specialItems.push("Sleep quality needs monitoring")
+    if (healthStatus.eating < 5) specialItems.push("Nutritional support recommended")
+    if (healthStatus.exercise < 5) specialItems.push("Encourage light physical activity")
+    if (totalHealth >= 28) specialItems.push("Overall excellent condition!")
     
-    // Fill with white background
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-  }, [])
+    let text = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FAMILY UPDATE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  useEffect(() => {
-    // Generate creative text
-    if (selectedClient) {
-      const text = `Dear Family of ${selectedClient.name},\n\n`
-        + `Today's visit was wonderful! Here's a summary of our time together:\n\n`
-        + `Health Check:\n`
-        + `- Water Intake: ${healthStatus.water}/10\n`
-        + `- Sleep Quality: ${healthStatus.sleep}/10\n`
-        + `- Eating Status: ${healthStatus.eating}/10\n`
-        + `- Exercise Level: ${healthStatus.exercise}/10\n\n`
-        + `We had a great cognitive assessment session. ${selectedClient.name} was engaged and responsive throughout.\n\n`
-        + `With warm regards,\n`
-        + `Your Social Worker`
-      setCreativeText(text)
+Dear Family of ${clientName},
+
+Date: ${formattedServiceDate}
+
+Today's visit was wonderful! Here's a summary:
+
+── HEALTH STATUS ──────────────
+Water Intake:    ${"★".repeat(healthStatus.water)}${"☆".repeat(10 - healthStatus.water)} (${healthStatus.water}/10)
+Sleep Quality:   ${"★".repeat(healthStatus.sleep)}${"☆".repeat(10 - healthStatus.sleep)} (${healthStatus.sleep}/10)
+Eating Habits:   ${"★".repeat(healthStatus.eating)}${"☆".repeat(10 - healthStatus.eating)} (${healthStatus.eating}/10)
+Exercise Level:  ${"★".repeat(healthStatus.exercise)}${"☆".repeat(10 - healthStatus.exercise)} (${healthStatus.exercise}/10)
+
+Overall Status: ${healthLevel} (${totalHealth}/40)
+`
+
+    // Add special items section
+    if (specialItems.length > 0) {
+      text += `
+── SPECIAL NOTES ──────────────
+`
+      specialItems.forEach(item => {
+        text += `• ${item}\n`
+      })
     }
-  }, [selectedClient, healthStatus])
+
+    // Add assessment summary if available
+    if (assessmentAnswers.length > 0) {
+      text += `
+── ACTIVITIES COMPLETED ───────
+`
+      assessmentAnswers.forEach((answer, index) => {
+        const status = answer.completionStatus === "100% Complete" ? "✓" : "○"
+        text += `${status} Activity ${index + 1}: ${answer.completionStatus || "In Progress"}\n`
+      })
+      
+      const completed = assessmentAnswers.filter(a => a.completionStatus === "100% Complete").length
+      text += `\nCompleted: ${completed}/${assessmentAnswers.length} activities\n`
+    }
+
+    text += `
+── MESSAGE ────────────────────
+${clientName} was engaged and responsive
+throughout the visit. We enjoyed our
+time together!
+
+With warm regards,
+Your Care Team
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    setCreativeText(text)
+  }, [selectedClient, healthStatus, assessmentAnswers, serviceDate, serviceDateEnabled])
+
+  // Initialize canvas with text report as background
+  useEffect(() => {
+    const initializeCanvas = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return false
+      
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return false
+
+      const container = containerRef.current
+      if (!container) return false
+
+      // Get container dimensions
+      const rect = container.getBoundingClientRect()
+      if (rect.width === 0) return false // Container not ready
+
+      // Set canvas size based on container
+      canvas.width = rect.width * 2
+      canvas.height = 600 * 2
+      ctx.scale(2, 2)
+      
+      // Fill with white background
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, rect.width, 600)
+      
+      // Draw text report on canvas
+      ctx.fillStyle = "#1e293b"
+      ctx.font = "13px 'Courier New', monospace"
+      
+      const lines = creativeText.split("\n")
+      let y = 24
+      const lineHeight = 18
+      const padding = 16
+      
+      lines.forEach((line) => {
+        ctx.fillText(line, padding, y)
+        y += lineHeight
+      })
+
+      setCanvasReady(true)
+      return true
+    }
+
+    // Try initializing immediately
+    if (!initializeCanvas()) {
+      // If failed, retry after a short delay (for container to render)
+      const timeout = setTimeout(() => {
+        initializeCanvas()
+      }, 100)
+      return () => clearTimeout(timeout)
+    }
+  }, [creativeText])
+
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    
+    const rect = canvas.getBoundingClientRect()
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    }
+  }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (selectedSticker) {
+    const { x, y } = getCoordinates(e)
+
+    if (toolMode === "sticker" && selectedSticker) {
       // Place sticker
-      const canvas = canvasRef.current
-      if (!canvas) return
-      
-      const rect = canvas.getBoundingClientRect()
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
-      const x = clientX - rect.left
-      const y = clientY - rect.top
-      
       setPlacedStickers(prev => [...prev, {
         id: Date.now().toString(),
         stickerId: selectedSticker,
         x,
         y
       }])
-      setSelectedSticker(null)
       return
     }
 
-    setIsDrawing(true)
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
-    const x = clientX - rect.left
-    const y = clientY - rect.top
-    
-    ctx.beginPath()
-    ctx.moveTo(x, y)
+    if (toolMode === "draw") {
+      setIsDrawing(true)
+      const canvas = canvasRef.current
+      if (!canvas) return
+      
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+      
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+    }
   }
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return
+    if (!isDrawing || toolMode !== "draw") return
     
     const canvas = canvasRef.current
     if (!canvas) return
@@ -152,11 +269,7 @@ export function CreativeView() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
     
-    const rect = canvas.getBoundingClientRect()
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
-    const x = clientX - rect.left
-    const y = clientY - rect.top
+    const { x, y } = getCoordinates(e)
     
     ctx.lineTo(x, y)
     ctx.strokeStyle = brushColor
@@ -176,19 +289,201 @@ export function CreativeView() {
     
     const ctx = canvas.getContext("2d")
     if (!ctx) return
+
+    const container = containerRef.current
+    if (!container) return
     
+    const rect = container.getBoundingClientRect()
+    
+    // Redraw with white background and text
     ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillRect(0, 0, rect.width, 600)
+    
+    // Redraw text report
+    ctx.fillStyle = "#1e293b"
+    ctx.font = "13px 'Courier New', monospace"
+    
+    const lines = creativeText.split("\n")
+    let y = 24
+    const lineHeight = 18
+    const padding = 16
+    
+    lines.forEach((line) => {
+      ctx.fillText(line, padding, y)
+      y += lineHeight
+    })
+    
     setPlacedStickers([])
+    setUploadedImages([])
   }
 
-  const handleDownload = () => {
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const src = event.target?.result as string
+        if (!src) return
+
+        // Create image to get dimensions
+        const img = new window.Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+          // Scale image to fit nicely (max 150px width)
+          const maxWidth = 150
+          const scale = Math.min(1, maxWidth / img.width)
+          const width = img.width * scale
+          const height = img.height * scale
+
+          setUploadedImages(prev => [...prev, {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            src,
+            x: 20,
+            y: 20,
+            width,
+            height
+          }])
+        }
+        img.src = src
+      }
+      reader.readAsDataURL(file)
+    })
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // Handle image drag start
+  const handleImageDragStart = (e: React.MouseEvent | React.TouchEvent, imageId: string) => {
+    e.stopPropagation()
+    const image = uploadedImages.find(img => img.id === imageId)
+    if (!image) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+
+    setDraggingImage(imageId)
+    setDragOffset({
+      x: clientX - rect.left - image.x,
+      y: clientY - rect.top - image.y
+    })
+  }
+
+  // Handle image drag move
+  const handleImageDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!draggingImage) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+
+    const newX = Math.max(0, Math.min(rect.width - 50, clientX - rect.left - dragOffset.x))
+    const newY = Math.max(0, Math.min(600 - 50, clientY - rect.top - dragOffset.y))
+
+    setUploadedImages(prev => prev.map(img => 
+      img.id === draggingImage ? { ...img, x: newX, y: newY } : img
+    ))
+  }
+
+  // Handle image drag end
+  const handleImageDragEnd = () => {
+    setDraggingImage(null)
+  }
+
+  // Remove image
+  const removeImage = (imageId: string) => {
+    setUploadedImages(prev => prev.filter(img => img.id !== imageId))
+  }
+
+  const handleExport = async () => {
     const canvas = canvasRef.current
     if (!canvas) return
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+
+    // Create a temporary canvas for export
+    const exportCanvas = document.createElement("canvas")
+    exportCanvas.width = rect.width * 2
+    exportCanvas.height = 600 * 2
+    const exportCtx = exportCanvas.getContext("2d")
+    if (!exportCtx) return
+
+    exportCtx.scale(2, 2)
+
+    // Copy current canvas (includes drawings and text)
+    exportCtx.drawImage(canvas, 0, 0, rect.width, 600)
+
+    // Draw uploaded images
+    const imagePromises = uploadedImages.map(img => {
+      return new Promise<void>((resolve) => {
+        const image = new window.Image()
+        image.crossOrigin = "anonymous"
+        image.onload = () => {
+          exportCtx.drawImage(image, img.x, img.y, img.width, img.height)
+          resolve()
+        }
+        image.onerror = () => resolve()
+        image.src = img.src
+      })
+    })
+
+    await Promise.all(imagePromises)
+
+    // Draw stickers as colored circles with icons representation
+    placedStickers.forEach((placed) => {
+      const sticker = stickers.find(s => s.id === placed.stickerId)
+      if (!sticker) return
+      
+      // Draw a colored circle to represent the sticker
+      exportCtx.beginPath()
+      exportCtx.arc(placed.x, placed.y, 16, 0, Math.PI * 2)
+      
+      // Get color from class
+      const colorMap: Record<string, string> = {
+        "text-rose-500": "#f43f5e",
+        "text-amber-500": "#f59e0b",
+        "text-yellow-500": "#eab308",
+        "text-emerald-500": "#22c55e",
+        "text-blue-500": "#3b82f6",
+        "text-purple-500": "#a855f7",
+        "text-pink-500": "#ec4899",
+        "text-orange-500": "#f97316",
+        "text-teal-500": "#14b8a6",
+        "text-indigo-500": "#6366f1"
+      }
+      exportCtx.fillStyle = colorMap[sticker.color] || "#3b82f6"
+      exportCtx.fill()
+      
+      // Draw label
+      exportCtx.fillStyle = "#ffffff"
+      exportCtx.font = "10px sans-serif"
+      exportCtx.textAlign = "center"
+      exportCtx.fillText(sticker.label.charAt(0), placed.x, placed.y + 4)
+    })
     
     const link = document.createElement("a")
-    link.download = `creative-report-${Date.now()}.png`
-    link.href = canvas.toDataURL()
+    link.download = `creative-report-${selectedClient?.name || "client"}-${new Date().toISOString().split("T")[0]}.png`
+    link.href = exportCanvas.toDataURL("image/png")
     link.click()
   }
 
@@ -197,174 +492,282 @@ export function CreativeView() {
       {/* Header */}
       <div>
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Palette className="h-5 w-5 text-primary" />
+          <Palette className="h-5 w-5 text-slate-500" />
           Creative Report
         </h2>
         <p className="text-sm text-muted-foreground">
-          Create a personalized report for client&apos;s family
+          Draw and add stickers directly on the text report for client&apos;s family
         </p>
       </div>
 
-      <Tabs defaultValue="canvas" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="canvas">Canvas</TabsTrigger>
-          <TabsTrigger value="text">Text Report</TabsTrigger>
-        </TabsList>
+      {/* Tool Mode Selection */}
+      <div className="flex gap-2">
+        <Button
+          variant={toolMode === "draw" ? "default" : "outline"}
+          onClick={() => { setToolMode("draw"); setSelectedSticker(null) }}
+          className={cn(
+            "flex-1 gap-2",
+            toolMode === "draw" ? "bg-slate-500 hover:bg-slate-600" : "border-slate-300 text-slate-600"
+          )}
+        >
+          <Pencil className="h-4 w-4" />
+          Doodle
+        </Button>
+        <Button
+          variant={toolMode === "sticker" ? "default" : "outline"}
+          onClick={() => setToolMode("sticker")}
+          className={cn(
+            "flex-1 gap-2",
+            toolMode === "sticker" ? "bg-slate-500 hover:bg-slate-600" : "border-slate-300 text-slate-600"
+          )}
+        >
+          <StickyNote className="h-4 w-4" />
+          Stickers
+        </Button>
+        <Button
+          variant={toolMode === "image" ? "default" : "outline"}
+          onClick={() => setToolMode("image")}
+          className={cn(
+            "flex-1 gap-2",
+            toolMode === "image" ? "bg-slate-500 hover:bg-slate-600" : "border-slate-300 text-slate-600"
+          )}
+        >
+          <ImagePlus className="h-4 w-4" />
+          Images
+        </Button>
+      </div>
 
-        <TabsContent value="canvas" className="mt-4">
-          {/* Drawing Tools */}
-          <Card className="mb-4">
-            <CardContent className="pt-4">
-              <div className="flex flex-col gap-4">
-                {/* Colors */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setBrushColor(color)}
-                      className={cn(
-                        "h-8 w-8 rounded-full border-2 transition-all",
-                        brushColor === color ? "border-foreground scale-110" : "border-transparent"
-                      )}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setBrushColor("#ffffff")}
-                    className="h-8 w-8"
-                  >
-                    <Eraser className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Brush Size */}
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Size:</span>
-                  <Slider
-                    value={brushSize}
-                    onValueChange={setBrushSize}
-                    min={1}
-                    max={20}
-                    step={1}
-                    className="flex-1"
+      {/* Drawing Tools - Show when in draw mode */}
+      {toolMode === "draw" && (
+        <Card className="border-slate-200">
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-4">
+              {/* Colors */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {colors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setBrushColor(color)}
+                    className={cn(
+                      "h-8 w-8 rounded-full border-2 transition-all",
+                      brushColor === color ? "border-slate-700 scale-110" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color }}
                   />
-                  <span className="text-sm font-medium w-6">{brushSize[0]}</span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={clearCanvas}>
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Clear
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-1" />
-                    Save
-                  </Button>
-                </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setBrushColor("#ffffff")}
+                  className="h-8 w-8 border-slate-300"
+                >
+                  <Eraser className="h-4 w-4" />
+                </Button>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Canvas */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-0 relative">
-              <canvas
-                ref={canvasRef}
-                className="w-full h-64 touch-none"
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-              />
-              {/* Placed Stickers */}
-              {placedStickers.map((placed) => {
-                const sticker = stickers.find(s => s.id === placed.stickerId)
-                if (!sticker) return null
+              {/* Brush Size */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Size:</span>
+                <Slider
+                  value={brushSize}
+                  onValueChange={setBrushSize}
+                  min={1}
+                  max={20}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-sm font-medium w-6">{brushSize[0]}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stickers - Show when in sticker mode */}
+      {toolMode === "sticker" && (
+        <Card className="border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-slate-700">Select a Sticker</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-5 gap-2">
+              {stickers.map((sticker) => {
                 const Icon = sticker.icon
                 return (
-                  <div
-                    key={placed.id}
-                    className={cn("absolute pointer-events-none", sticker.color)}
-                    style={{ left: placed.x - 16, top: placed.y - 16 }}
+                  <button
+                    key={sticker.id}
+                    onClick={() => setSelectedSticker(sticker.id === selectedSticker ? null : sticker.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
+                      selectedSticker === sticker.id
+                        ? "bg-slate-200 ring-2 ring-slate-400"
+                        : "bg-slate-50 hover:bg-slate-100"
+                    )}
                   >
-                    <Icon className="h-8 w-8" />
-                  </div>
+                    <Icon className={cn("h-6 w-6", sticker.color)} />
+                    <span className="text-xs text-muted-foreground">
+                      {sticker.label}
+                    </span>
+                  </button>
                 )
               })}
-            </CardContent>
-          </Card>
+            </div>
+            {selectedSticker && (
+              <p className="text-xs text-center text-slate-600 mt-3">
+                Tap on the report below to place the sticker
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Stickers */}
-          <Card className="mt-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Stickers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-2">
-                {stickers.map((sticker) => {
-                  const Icon = sticker.icon
-                  return (
-                    <button
-                      key={sticker.id}
-                      onClick={() => setSelectedSticker(sticker.id === selectedSticker ? null : sticker.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
-                        selectedSticker === sticker.id
-                          ? "bg-primary/20 ring-2 ring-primary"
-                          : "bg-muted/50 hover:bg-muted"
-                      )}
-                    >
-                      <Icon className={cn("h-6 w-6", sticker.color)} />
-                      <span className="text-xs text-muted-foreground">
-                        {sticker.label}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-              {selectedSticker && (
-                <p className="text-xs text-center text-primary mt-3">
-                  Tap on the canvas to place the sticker
+      {/* Image Upload - Show when in image mode */}
+      {toolMode === "image" && (
+        <Card className="border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-slate-700">Upload Images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors"
+            >
+              <ImagePlus className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+              <p className="text-sm text-slate-600">Click to upload images</p>
+              <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF supported</p>
+            </div>
+            
+            {/* Uploaded Images Preview */}
+            {uploadedImages.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-slate-600 mb-2 flex items-center gap-1">
+                  <Move className="h-3 w-3" />
+                  Drag images on the report to reposition
                 </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="text" className="mt-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Type className="h-4 w-4" />
-                Family Report
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={creativeText}
-                onChange={(e) => setCreativeText(e.target.value)}
-                className="min-h-[300px] resize-none"
-                placeholder="Write a personalized message for the client's family..."
-              />
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" className="flex-1">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-                <Button className="flex-1">
-                  Share Report
-                </Button>
+                <div className="grid grid-cols-4 gap-2">
+                  {uploadedImages.map((img) => (
+                    <div key={img.id} className="relative group">
+                      <img 
+                        src={img.src} 
+                        alt="Uploaded"
+                        className="w-full h-16 object-cover rounded-lg border border-slate-200"
+                      />
+                      <button
+                        onClick={() => removeImage(img.id)}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Unified Canvas with Text Report */}
+      <Card className="overflow-hidden border-slate-200">
+        <CardHeader className="pb-2 border-b border-slate-100">
+          <CardTitle className="text-sm flex items-center justify-between text-slate-700">
+            <span>Report Canvas</span>
+            <Button variant="outline" size="sm" onClick={clearCanvas} className="gap-1.5 border-slate-300 text-slate-600">
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear All
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent 
+          className="p-0 relative" 
+          ref={containerRef}
+          onMouseMove={handleImageDragMove}
+          onMouseUp={handleImageDragEnd}
+          onMouseLeave={handleImageDragEnd}
+          onTouchMove={handleImageDragMove}
+          onTouchEnd={handleImageDragEnd}
+        >
+          <canvas
+            ref={canvasRef}
+            className="w-full touch-none bg-white"
+            style={{ height: "600px" }}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+          />
+          
+          {/* Placed Images - Draggable */}
+          {uploadedImages.map((img) => (
+            <div
+              key={img.id}
+              className={cn(
+                "absolute cursor-move group",
+                draggingImage === img.id && "opacity-75 z-50"
+              )}
+              style={{ 
+                left: img.x, 
+                top: img.y, 
+                width: img.width, 
+                height: img.height 
+              }}
+              onMouseDown={(e) => handleImageDragStart(e, img.id)}
+              onTouchStart={(e) => handleImageDragStart(e, img.id)}
+            >
+              <img 
+                src={img.src} 
+                alt="Uploaded"
+                className="w-full h-full object-cover rounded-lg shadow-md border-2 border-white"
+                draggable={false}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
+                className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <div className="absolute inset-0 border-2 border-slate-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            </div>
+          ))}
+
+          {/* Placed Stickers */}
+          {placedStickers.map((placed) => {
+            const sticker = stickers.find(s => s.id === placed.stickerId)
+            if (!sticker) return null
+            const Icon = sticker.icon
+            return (
+              <div
+                key={placed.id}
+                className={cn("absolute pointer-events-none", sticker.color)}
+                style={{ left: placed.x - 16, top: placed.y - 16 }}
+              >
+                <Icon className="h-8 w-8" />
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Export Button */}
+      <Button 
+        onClick={handleExport} 
+        className="w-full gap-2 bg-slate-500 hover:bg-slate-600"
+        size="lg"
+      >
+        <Download className="h-5 w-5" />
+        Export Report
+      </Button>
     </div>
   )
 }
